@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 abstract contract DelegateERC20 is ERC20 {
     // A record of each accounts delegate
     mapping(address => address) internal _delegates;
+    uint256 public totalBurned;
 
     // A checkpoint for marking number of votes from a given block
     struct Checkpoint {
@@ -45,6 +46,7 @@ abstract contract DelegateERC20 is ERC20 {
         super._burn(account, amount);
 
         _moveDelegates(_delegates[account], address(0), amount);
+        totalBurned += amount;
     }
 
     function _transfer(
