@@ -76,15 +76,16 @@ contract DSGToken is DelegateERC20, Ownable {
         address recipient,
         uint256 amount
     ) internal virtual override {
+        uint256 _amount = amount;
         if(_whiteList[sender] == false && _whiteList[recipient] == false && recipient != address(0)) {
             if(vTokenFeeRate > 0) {
-                uint256 fee = amount.mul(vTokenFeeRate).div(10000);
+                uint256 fee = _amount.mul(vTokenFeeRate).div(10000);
                 amount = amount.sub(fee);
                 super._transfer(sender, feeWallet, fee);
             }
 
             if(burnRate > 0) {
-                uint256 burn = amount.mul(burnRate).div(10000);
+                uint256 burn = _amount.mul(burnRate).div(10000);
                 amount = amount.sub(burn);
                 _burn(sender, burn);
             }
