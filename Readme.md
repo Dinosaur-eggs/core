@@ -1,4 +1,4 @@
-# Dinosaur Egg Metaverse
+# Dinosaur Eggs Metaverse
 
 # Local Development
 
