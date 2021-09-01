@@ -47,6 +47,15 @@ contract DsgNft is IDsgNft, ERC721, Initializable, ReentrancyGuard, Pausable, Ow
 
     mapping(uint256=>LibPart.NftInfo) private _nfts;
 
+    /*
+     *     bytes4(keccak256('getRoyalties(uint256)')) == 0xbb3bafd6
+     *     bytes4(keccak256('sumRoyalties(uint256)')) == 0x09b94e2a
+     *
+     *     => 0xbb3bafd6 ^ 0x09b94e2a == 0xb282e1fc
+     */
+    bytes4 private constant _INTERFACE_ID_GET_ROYALTIES = 0xbb3bafd6;
+    bytes4 private constant _INTERFACE_ID_ROYALTIES = 0xb282e1fc;
+
     int256 constant PERCENT_POINT = 10000;
 
     uint256 private _tokenId = 1000;
@@ -65,14 +74,19 @@ contract DsgNft is IDsgNft, ERC721, Initializable, ReentrancyGuard, Pausable, Ow
 
     string private _name;
     string private _symbol;
+    bool public canUpgrade;
 
-    constructor(string memory name_, string memory symbol_, address feeToken, address feeWallet_) public ERC721("", "")
+    constructor(string memory name_, string memory symbol_, address feeToken, address feeWallet_, bool _canUpgrade) public ERC721("", "")
     {
+        _registerInterface(_INTERFACE_ID_GET_ROYALTIES);
+        _registerInterface(_INTERFACE_ID_ROYALTIES);
+
         _name = name_;
         _symbol = symbol_;
         _token = IERC20(feeToken);
         _feeWallet = feeWallet_;
         _baseURIVar = "https://api.dsgmetaverse.com/nft/";
+        canUpgrade = _canUpgrade;
     }
 
     function name() public view override returns (string memory) {
@@ -109,6 +123,10 @@ contract DsgNft is IDsgNft, ERC721, Initializable, ReentrancyGuard, Pausable, Ow
 
     function getFeeToken() public view override returns (address) {
         return address(_token);
+    }
+
+    function setCanUpgrade(bool newVal) public onlyOwner {
+        canUpgrade = newVal;
     }
 
     function getNft(uint256 id) public view override returns (LibPart.NftInfo memory) {
@@ -220,6 +238,7 @@ contract DsgNft is IDsgNft, ERC721, Initializable, ReentrancyGuard, Pausable, Ow
 
     function upgradeNft(uint256 nftId, uint256 materialNftId) public override nonReentrant whenNotPaused
     {
+        require(canUpgrade, "CANT UPGRADE");
         LibPart.NftInfo memory nft = getNft(nftId);
         LibPart.NftInfo memory materialNft = getNft(materialNftId);
 
