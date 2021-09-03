@@ -13,6 +13,7 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../libraries/LibPart.sol";
 import "../libraries/TransferHelper.sol";
+import "../interfaces/IWOKT.sol";
 import "../governance/InitializableOwner.sol";
 
 interface Royalties {
@@ -81,6 +82,8 @@ contract NFTMarket is Context, IERC721Receiver, ReentrancyGuard, InitializableOw
     SalesObject[] _salesObjects;
 
     uint256 public _minDurationTime = 5 minutes;
+    
+    address WETH;
 
     mapping(address => bool) public _seller;
     mapping(address => bool) public _verifySeller;
@@ -99,13 +102,14 @@ contract NFTMarket is Context, IERC721Receiver, ReentrancyGuard, InitializableOw
 
     }
 
-    function initialize(address payable tipsFeeWallet) public {
+    function initialize(address payable tipsFeeWallet, address weth) public {
         super._initialize();
 
         _tipsFeeRate = 20;
         _baseRate = 1000;
         _minDurationTime = 5 minutes;
         _tipsFeeWallet = tipsFeeWallet;
+        WETH = weth;
 
         addSupportCurrency(TransferHelper.getETH());
     }
@@ -347,7 +351,7 @@ contract NFTMarket is Context, IERC721Receiver, ReentrancyGuard, InitializableOw
                 if (feeValue != 0) {
                     royaltiesAmount = royaltiesAmount.add(feeValue);
                     if(TransferHelper.isETH(currencyAddr)) {
-                        fees[i].account.transfer(feeValue);
+                        TransferHelper.safeTransferETH(fees[i].account, feeValue);
                     } else {
                         IERC20(currencyAddr).safeTransferFrom(msg.sender, fees[i].account, feeValue);
                     }
@@ -362,7 +366,8 @@ contract NFTMarket is Context, IERC721Receiver, ReentrancyGuard, InitializableOw
                 payable(msg.sender).transfer(returnBack);
             }
             if(tipsFee > 0) {
-                _tipsFeeWallet.transfer(tipsFee);
+                IWOKT(WETH).deposit{value: tipsFee}();
+                IWOKT(WETH).transfer(_tipsFeeWallet, tipsFee);
             }
             obj.seller.transfer(purchase);
         } else {
