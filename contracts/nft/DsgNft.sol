@@ -66,7 +66,7 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
     IERC20 private _token;
     address public _feeWallet;
 
-    uint256 private _upgradeFeeBase = 1**18;
+    uint256 private _upgradeFeeBase = 10**16;
     uint256[] private _levelBasePower = [1000, 2500, 6500, 14500, 35000, 90000];
 
     mapping(uint256 => LibPart.Part[])  private _royalties; //tokenId : LibPart.Part[]
@@ -246,7 +246,7 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
     }
 
     function getUpgradeFee(uint256 newLevel) public view returns (uint256) {
-        return _upgradeFeeBase * _levelBasePower[newLevel];
+        return _upgradeFeeBase * _levelBasePower[newLevel-1];
     }
 
     function upgradeNft(uint256 nftId, uint256 materialNftId) public override nonReentrant whenNotPaused
