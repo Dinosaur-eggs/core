@@ -54,7 +54,7 @@ contract vDSGToken is Ownable {
     uint256 public _totalStakingPower;
     mapping(address => UserInfo) public userInfo;
     
-    uint256 public _superiorMinSP; //The superior must obtain the min stakong power that should be pledged for invitation rewards
+    uint256 public _superiorMinDSG; //The superior must obtain the min DSG that should be pledged for invitation rewards
 
     struct UserInfo {
         uint128 stakingPower;
@@ -125,8 +125,8 @@ contract vDSGToken is Ownable {
         _aggregator = aggregator;
     }
     
-    function setSuperiorMinSP(uint256 val) public onlyOwner {
-        _superiorMinSP = val;
+    function setSuperiorMinDSG(uint256 val) public onlyOwner {
+        _superiorMinDSG = val;
     }
 
     function emergencyWithdraw() public onlyOwner {
@@ -154,8 +154,11 @@ contract vDSGToken is Ownable {
             user.superior = superiorAddress;
         }
         
-        if(_superiorMinSP > 0 && userInfo[user.superior].stakingPower < _superiorMinSP) {
-            user.superior = _dsgTeam;
+        if(_superiorMinDSG > 0) {
+            uint256 curDSG = dsgBalanceOf(user.superior);
+            if(curDSG < _superiorMinDSG) {
+                user.superior = _dsgTeam;
+            }
         }
 
         _updateAlpha();
