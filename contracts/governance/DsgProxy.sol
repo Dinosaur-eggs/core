@@ -8,4 +8,12 @@ contract DsgProxy is TransparentUpgradeableProxy {
     constructor(address _logic, address admin_) public TransparentUpgradeableProxy(_logic, admin_, ""){
 
     }
+    
+    function nopShowAdmin() public view returns(address) {
+        return _admin();
+    }
+    
+    function nopShowImplementation() public view returns(address) {
+        return _implementation();
+    }
 }

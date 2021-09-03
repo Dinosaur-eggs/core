@@ -11,7 +11,7 @@ contract InitializableOwner is Initializable {
     address private _owner;
 
     function _initialize() initializer internal {
-        _owner = tx.origin;
+        _owner = msg.sender;
     }
 
     function owner() public view virtual returns (address) {
