@@ -3,21 +3,20 @@
 pragma solidity =0.6.12;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/proxy/Initializable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "../governance/InitializableOwner.sol";
 import "../interfaces/IDsgNft.sol";
 import "../libraries/LibPart.sol";
 import "../libraries/Random.sol";
 
 
-contract DsgNft is IDsgNft, ERC721, Initializable, ReentrancyGuard, Pausable, Ownable
+contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausable
 {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -76,8 +75,22 @@ contract DsgNft is IDsgNft, ERC721, Initializable, ReentrancyGuard, Pausable, Ow
     string private _symbol;
     bool public canUpgrade;
 
-    constructor(string memory name_, string memory symbol_, address feeToken, address feeWallet_, bool _canUpgrade) public ERC721("", "")
+    constructor() public ERC721("", "")
     {
+       
+    }
+    
+    function initialize(
+        string memory name_, 
+        string memory symbol_, 
+        address feeToken, 
+        address feeWallet_, 
+        bool _canUpgrade,
+        string memory baseURI_
+    ) public {
+            
+        super._initialize();
+        
         _registerInterface(_INTERFACE_ID_GET_ROYALTIES);
         _registerInterface(_INTERFACE_ID_ROYALTIES);
 
@@ -85,7 +98,7 @@ contract DsgNft is IDsgNft, ERC721, Initializable, ReentrancyGuard, Pausable, Ow
         _symbol = symbol_;
         _token = IERC20(feeToken);
         _feeWallet = feeWallet_;
-        _baseURIVar = "https://api.dsgmetaverse.com/nft/";
+        _baseURIVar = baseURI_;
         canUpgrade = _canUpgrade;
     }
 
