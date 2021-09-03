@@ -627,4 +627,8 @@ contract LiquidityPool is Ownable, IAsset {
         uint256 result = data.totalDeposit.sub(data.totalFrozen);
         return result;
     }
+
+    function onERC721Received(address operator, address from, uint256 tokenId, bytes memory data) public returns (bytes4) {
+        return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
+    }
 }
