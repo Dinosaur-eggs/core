@@ -88,7 +88,10 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
         bool _canUpgrade,
         string memory baseURI_
     ) public {
-            
+        _tokenId = 1000;
+        _levelBasePower = [1000, 2500, 6500, 14500, 35000, 90000];
+        _upgradeFeeBase = 10**16;
+        
         super._initialize();
         
         _registerInterface(_INTERFACE_ID_GET_ROYALTIES);
