@@ -375,14 +375,15 @@ contract LiquidityPool is Ownable, IAsset {
         uint256 accRewardPerShare = pool.accRewardPerShare;
 
         uint256 pending = 0;
-        if (user.amount > 0) {
+        uint256 amount = user.amount.add(user.additionalAmount);
+        if (amount > 0) {
             if (block.number > pool.lastRewardBlock) {
                 uint256 blockReward = getRewardTokenBlockReward(pool.lastRewardBlock);
                 uint256 tokenReward = blockReward.mul(pool.allocPoint).div(totalAllocPoint);
                 accRewardPerShare = accRewardPerShare.add(tokenReward.mul(1e12).div(pool.totalAmount));
-                pending = user.amount.mul(accRewardPerShare).div(1e12).sub(user.rewardDebt);
+                pending = amount.mul(accRewardPerShare).div(1e12).sub(user.rewardDebt);
             } else if (block.number == pool.lastRewardBlock) {
-                pending = user.amount.mul(accRewardPerShare).div(1e12).sub(user.rewardDebt);
+                pending = amount.mul(accRewardPerShare).div(1e12).sub(user.rewardDebt);
             }
         }
         pending = pending.add(user.rewardPending);
