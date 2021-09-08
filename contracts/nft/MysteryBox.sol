@@ -6,12 +6,12 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "../governance/InitializableOwner.sol";
 import "../interfaces/IDsgNft.sol";
 import "../libraries/Random.sol";
 
 
-contract MysteryBox is ERC721, Ownable {
+contract MysteryBox is ERC721, InitializableOwner {
 
     struct BoxFactory {
         uint256 id;
@@ -49,6 +49,7 @@ contract MysteryBox is ERC721, Ownable {
     );
 
     event OpenBox(uint256 indexed id, address indexed nft, uint256 boxId, uint256 tokenId);
+    event Minted(uint256 indexed id, uint256 indexed factoryId, address to);
 
     uint256 private _boxFactoriesId = 0;
     uint256 private _boxId = 1e3;
@@ -60,9 +61,30 @@ contract MysteryBox is ERC721, Ownable {
 
     uint256[] private _levelBasePower = [1000, 2500, 6500, 14500, 35000, 90000];
 
-    constructor(
-    ) public ERC721("DsgMysteryBox", "DsgBox") {
-        _baseURIVar = "https://nft.dsgmetaverse.com/box/";
+    string private _name;
+    string private _symbol;
+
+    constructor() public ERC721("", "") {
+    }
+
+    function initialize(string memory uri) public {
+        super._initialize();
+
+        _levelBasePower = [1000, 2500, 6500, 14500, 35000, 90000];
+        _boxId = 1e3;
+
+        _baseURIVar = uri;
+
+        _name = "DsgMysteryBox";
+        _symbol = "DsgBox";
+    }
+
+    function name() public view override returns (string memory) {
+        return _name;
+    }
+
+    function symbol() public view override returns (string memory) {
+        return _symbol;
     }
 
     function setBaseURI(string memory uri) public onlyOwner {
@@ -134,6 +156,7 @@ contract MysteryBox is ERC721, Ownable {
             _boxId++;
             _mint(to, _boxId);
             _boxes[_boxId] = factoryId;
+            emit Minted(_boxId, factoryId, to);
         }
     }
 

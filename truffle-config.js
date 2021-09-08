@@ -54,7 +54,7 @@ module.exports = {
     },
     bsctest: {
       provider: function () {
-        return new HDWalletProvider(privKey, "https://data-seed-prebsc-2-s3.binance.org:8545/");
+        return new HDWalletProvider(privKey, "https://data-seed-prebsc-1-s3.binance.org:8545/");
       },
       network_id: 97,
       confirmations: 0,
