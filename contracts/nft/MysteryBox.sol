@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "../governance/InitializableOwner.sol";
 import "../interfaces/IDsgNft.sol";
+import "../interfaces/IFragmentToken.sol";
 import "../libraries/Random.sol";
 
 
@@ -19,10 +20,10 @@ contract MysteryBox is ERC721, InitializableOwner {
         IDsgNft nft;
         uint256 limit; //0 unlimit
         uint256 minted;
+        address currency;
+        uint256 price;
+        string resPrefix; // default res prefix
         address author;
-        string resPrefix; //If the resNumBegin = resNumEnd, resName will be resPrefix
-        uint resNumBegin;
-        uint resNumEnd;
         uint256 createdTime;
     }
 
@@ -36,15 +37,21 @@ contract MysteryBox is ERC721, InitializableOwner {
         address author;
     }
 
+    struct ResInfo {
+        string name;
+        string prefix; //If the resNumBegin = resNumEnd, resName will be resPrefix
+        uint numBegin;
+        uint numEnd;
+    }
+
     event NewBoxFactory(
         uint256 indexed id,
         string name,
         address nft,
         uint256 limit,
         address author,
-        string resPrefix,
-        uint resNumBegin,
-        uint resNumEnd,
+        address currency,
+        uint256 price,
         uint256 createdTime
     );
 
@@ -56,8 +63,9 @@ contract MysteryBox is ERC721, InitializableOwner {
 
     string private _baseURIVar;
 
-    mapping(uint256 => uint256) private _boxes; //boxId: BoxFactoryId
-    mapping(uint256 => BoxFactory) private _boxFactories;
+    mapping(uint256 => uint256) private _boxes; // boxId: BoxFactoryId
+    mapping(uint256 => BoxFactory) private _boxFactories; // factoryId: BoxFactory
+    mapping(uint256 => mapping(uint256 => ResInfo)) private _res; // factoryId: {level: ResInfo}
 
     uint256[] private _levelBasePower = [1000, 2500, 6500, 14500, 35000, 90000];
 
@@ -95,52 +103,60 @@ contract MysteryBox is ERC721, InitializableOwner {
         return _baseURIVar;
     }
 
-    function randomRes(uint256 seed, string memory prefix, uint numBegin, uint numEnd) internal pure returns(string memory res) {
-        uint256 num = uint256(numEnd - numBegin);
-        if(num == 0) {
-            return prefix;
-        }
-
-        num = seed / 3211 % (num+1) + uint256(numBegin);
-        res = string(abi.encodePacked(prefix, num.toString()));
-    }
-
     function addBoxFactory(
-        string memory name,
+        string memory name_,
         IDsgNft nft,
         uint256 limit,
         address author,
-        string memory resPrefix,
-        uint resNumBegin,
-        uint resNumEnd
+        address currency,
+        uint256 price,
+        string memory resPrefix
     ) public onlyOwner returns (uint256) {
         _boxFactoriesId++;
 
         BoxFactory memory box;
         box.id = _boxFactoriesId;
-        box.name = name;
+        box.name = name_;
         box.nft = nft;
         box.limit = limit;
-        box.resPrefix = resPrefix;
-        box.resNumBegin = resNumBegin;
-        box.resNumEnd = resNumEnd;
         box.author = author;
+        box.currency = currency;
+        box.price = price;
+        box.resPrefix  = resPrefix;
         box.createdTime = block.timestamp;
 
         _boxFactories[_boxFactoriesId] = box;
 
         emit NewBoxFactory(
             _boxFactoriesId,
-            name,
+            name_,
             address(nft),
             limit,
             author,
-            resPrefix,
-            resNumBegin,
-            resNumEnd,
+            currency,
+            price,
             block.timestamp
         );
         return _boxFactoriesId;
+    }
+
+    function setRes(
+        uint256 factoryId, 
+        uint256 level, 
+        string memory nftName, 
+        string memory prefix, 
+        uint numBegin, 
+        uint numEnd
+    ) public onlyOwner {
+        ResInfo storage res = _res[factoryId][level];
+        res.name = nftName;
+        res.prefix = prefix;
+        res.numBegin = numBegin;
+        res.numEnd = numEnd;
+    }
+
+    function getRes(uint256 factoryId, uint256 level) public view returns (ResInfo memory) {
+        return _res[factoryId][level];
     }
 
     function mint(address to, uint256 factoryId, uint256 amount) public onlyOwner {
@@ -157,6 +173,27 @@ contract MysteryBox is ERC721, InitializableOwner {
             _mint(to, _boxId);
             _boxes[_boxId] = factoryId;
             emit Minted(_boxId, factoryId, to);
+        }
+    }
+
+    function buy(uint256 factoryId, uint256 amount) public {
+        BoxFactory storage box = _boxFactories[factoryId];
+        require(address(box.nft) != address(0), "box not found");
+
+        if(box.limit > 0) {
+            require(box.limit - box.minted >= amount, "Over the limit");
+        }
+        box.minted = box.minted + amount;
+
+        uint256 price = box.price.mul(amount);
+        IFragmentToken(box.currency).transferFrom(msg.sender, address(this), price);
+        IFragmentToken(box.currency).burn(price);
+
+        for(uint i = 0; i < amount; i++) {
+            _boxId++;
+            _mint(msg.sender, _boxId);
+            _boxes[_boxId] = factoryId;
+            emit Minted(_boxId, factoryId, msg.sender);
         }
     }
 
@@ -226,6 +263,33 @@ contract MysteryBox is ERC721, InitializableOwner {
         return _levelBasePower[6] + seed % 10000;
     }
 
+    function randomRes(uint256 seed, uint256 level, BoxFactory memory factory) 
+    internal view returns(string memory resName, string memory nftName) {
+        string memory prefix = factory.resPrefix;
+        uint numBegin = 1;
+        uint numEnd = 10;
+
+        {
+            ResInfo storage res = _res[factory.id][level];
+            if (bytes(res.prefix).length > 0) {
+                prefix = res.prefix;
+                numBegin = res.numBegin;
+                numEnd = res.numEnd;
+                nftName = res.name;
+            } else {
+                prefix = string(abi.encodePacked(prefix, level.toString(), "-"));
+            }
+        }
+
+        uint256 num = uint256(numEnd - numBegin);
+        if(num == 0) {
+            return (prefix, nftName);
+        }
+
+        num = seed / 3211 % (num+1) + uint256(numBegin);
+        resName = string(abi.encodePacked(prefix, num.toString()));
+    }
+
     function openBox(uint256 boxId) public {
         require(isContract(msg.sender) == false, "Prohibit contract calls");
 
@@ -235,11 +299,12 @@ contract MysteryBox is ERC721, InitializableOwner {
 
         uint256 seed = Random.computerSeed();
 
-        string memory resName = randomRes(seed, factory.resPrefix, factory.resNumBegin, factory.resNumEnd);
-
         uint256 level = getLevel(seed);
         uint256 power = randomPower(level, seed);
-        uint256 tokenId = factory.nft.mint(_msgSender(), "", level, power, resName, factory.author);
+        
+        (string memory resName, string memory nftName) = randomRes(seed, level, factory);
+
+        uint256 tokenId = factory.nft.mint(_msgSender(), nftName, level, power, resName, factory.author);
 
         emit OpenBox(boxId, address(factory.nft), boxId, tokenId);
     }
