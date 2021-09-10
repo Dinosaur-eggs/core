@@ -10,10 +10,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "../libraries/DecimalMath.sol";
 import "../interfaces/IDsgToken.sol";
 
-interface IAggregator {
-    function getCirculationSupply() external view returns (uint256);
-}
-
 contract vDSGToken is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -34,7 +30,6 @@ contract vDSGToken is Ownable {
     // ============ Storage ============
 
     address public _dsgToken;
-    address public _aggregator;
     address public _dsgTeam;
     address public _dsgReserve;
 
@@ -94,12 +89,10 @@ contract vDSGToken is Ownable {
     // ============ Constructor ============
 
     constructor(
-        address aggregator,
         address dsgToken,
         address dsgTeam,
         address dsgReserve
     ) public {
-        _aggregator = aggregator;
         _dsgToken = dsgToken;
         _dsgTeam = dsgTeam;
         _dsgReserve = dsgReserve;
@@ -127,10 +120,6 @@ contract vDSGToken is Ownable {
 
     function updateDSGFeeReserveRatio(uint256 dsgFeeReserve) public onlyOwner {
         _dsgFeeReserveRatio = dsgFeeReserve;
-    }
-
-    function updateAggregator(address aggregator) public onlyOwner {
-        _aggregator = aggregator;
     }
 
     function updateTeamAddress(address team) public onlyOwner {
@@ -337,7 +326,7 @@ contract vDSGToken is Ownable {
     }
 
     function getDsgWithdrawFeeRatio() public view returns (uint256 feeRatio) {
-        uint256 dsgCirculationAmount = IAggregator(_aggregator).getCirculationSupply();
+        uint256 dsgCirculationAmount = getCirculationSupply();
 
         uint256 x =
         DecimalMath.divCeil(
@@ -468,5 +457,9 @@ contract vDSGToken is Ownable {
         _mint(toUser, stakingPower);
 
         emit Transfer(from, to, vDsgAmount);
+    }
+
+     function getCirculationSupply() public view returns (uint256 supply) {
+        supply = IERC20(_dsgToken).totalSupply();
     }
 }
