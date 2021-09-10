@@ -18,10 +18,6 @@ interface ILiquidityPool {
     function donateToPool(uint256 pid, uint256 donateAmount) external;
 }
 
-interface IvDsg {
-    function donate(uint256 dsgAmount) external;
-}
-
 contract Treasury is InitializableOwner {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -37,7 +33,7 @@ contract Treasury is InitializableOwner {
     address public team;
     address public nftBonus;
     address public lpBonus;
-    address public vDsg;
+    address public vDsgTreasury;
     address public emergencyAddress;
 
     uint256 constant BASE_RATIO = 1000;
@@ -91,7 +87,7 @@ contract Treasury is InitializableOwner {
         address _router,
         address _usdt,
         address _dsg,
-        address _vdsg,
+        address _vdsgTreasury,
         address _lpPool,
         address _nftPool,
         address _teamAddress
@@ -102,7 +98,7 @@ contract Treasury is InitializableOwner {
         router = _router;
         USDT = _usdt;
         DSG = _dsg;
-        vDsg = _vdsg;
+        vDsgTreasury = _vdsgTreasury;
         lpBonus = _lpPool;
         nftBonus = _nftPool;
         team = _teamAddress;
@@ -138,9 +134,9 @@ contract Treasury is InitializableOwner {
         lpBonus = _newAddress;
     }
 
-    function setVDsgAddress(address _newAddress) public onlyOwner {
+    function setVDsgTreasuryAddress(address _newAddress) public onlyOwner {
         require(_newAddress != address(0), "Treasury: address is zero");
-        vDsg = _newAddress;
+        vDsgTreasury = _newAddress;
     }
 
     function _removeLiquidity(address _token0, address _token1) internal returns (uint256 amount0, uint256 amount1) {
@@ -257,24 +253,28 @@ contract Treasury is InitializableOwner {
         emit Distribute(_amount, _repurchasedAmount, _teamAmount, _nftBonusAmount, _burnedAmount);
     }
 
-    function sendToLpPool(uint256 _amountUSD) external onlyCaller {
+    function sendToLpPool(uint256 _amountUSD) public onlyCaller {
         require(_amountUSD <= lpBonusAmount, "Treasury: amount exceeds lp bonus amount");
+        lpBonusAmount = dsgLpBonusAmount.sub(_amountUSD);
 
         uint256 _amount = swapUSDToDSG(_amountUSD);
         IERC20(DSG).approve(lpBonus, _amount);
         ILiquidityPool(lpBonus).donate(_amount);
     }
 
-    function sendToDSGLpPool(uint256 _amountUSD, uint256 pid) external onlyCaller {
+    function sendToDSGLpPool(uint256 _amountUSD, uint256 pid) public onlyCaller {
         require(_amountUSD <= dsgLpBonusAmount, "Treasury: amount exceeds dsg lp bonus amount");
+        dsgLpBonusAmount = dsgLpBonusAmount.sub(dsgLpBonusAmount);
 
         uint256 _amount = swapUSDToDSG(_amountUSD);
         IERC20(DSG).approve(lpBonus, _amount);
         ILiquidityPool(lpBonus).donateToPool(pid, _amount);
     }
 
-    function sendToNftPool(uint256 _amountUSD, uint256 _rewardsBlocks) external onlyCaller {
+    function sendToNftPool(uint256 _amountUSD, uint256 _rewardsBlocks) public onlyCaller {
         require(_amountUSD <= nftBonusAmount, "Treasury: amount exceeds nft bonus amount");
+        nftBonusAmount = nftBonusAmount.sub(_amountUSD);
+
         uint256 _amount = swapUSDToDSG(_amountUSD);
 
         IERC20(DSG).approve(nftBonus, _amount);
@@ -282,12 +282,12 @@ contract Treasury is InitializableOwner {
         emit NFTPoolTransfer(nftBonus, _amount);
     }
 
-    function sendToVDSG(uint256 _amountUSD) external onlyCaller {
+    function sendToVDSG(uint256 _amountUSD) public onlyCaller {
         require(_amountUSD <= vDsgBonusAmount, "Treasury: amount exceeds vDsg bonus amount");
+        vDsgBonusAmount = vDsgBonusAmount.sub(_amountUSD);
 
         uint256 _amount = swapUSDToDSG(_amountUSD);
-        IERC20(DSG).approve(vDsg, _amount);
-        IvDsg(vDsg).donate(_amount);
+        IERC20(DSG).transfer(vDsgTreasury, _amount);
     }
 
     function repurchase(uint256 _amountIn) internal returns (uint256 amountOut) {
@@ -298,6 +298,19 @@ contract Treasury is InitializableOwner {
 
         totalRepurchasedUSDT = totalRepurchasedUSDT.add(_amountIn);
         totalBurnedDSG = totalBurnedDSG.add(amountOut);
+    }
+
+    function sendAll(uint256 _nftRewardsBlocks, uint256[] memory pids) external onlyCaller {
+        sendToLpPool(lpBonusAmount);
+        sendToNftPool(nftBonusAmount, _nftRewardsBlocks);
+        sendToVDSG(vDsgBonusAmount);
+        
+        if(pids.length > 0) {
+            uint256 amount = dsgLpBonusAmount.div(pids.length);
+            for (uint i = 0; i < pids.length; i++) {
+                sendToDSGLpPool(amount, pids[i]);
+            }
+        }
     }
 
     function emergencyWithdraw(address _token) public onlyOwner {
