@@ -36,6 +36,7 @@ contract vDSGToken is Ownable {
     address public _dsgToken;
     address public _aggregator;
     address public _dsgTeam;
+    address public _dsgReserve;
 
     bool public _canTransfer;
 
@@ -43,7 +44,8 @@ contract vDSGToken is Ownable {
     uint256 public _dsgPerBlock;
     uint256 public constant _superiorRatio = 10**17; // 0.1
     uint256 public constant _dsgRatio = 100; // 100
-    uint256 public _dsgFeeBurnRatio;
+    uint256 public _dsgFeeBurnRatio = 30**17; //0.3
+    uint256 public _dsgFeeReserveRatio = 20**17; //0.2
 
     // accounting
     uint112 public alpha = 10**18; // 1
@@ -66,7 +68,7 @@ contract vDSGToken is Ownable {
     // ============ Events ============
 
     event MintVDSG(address user, address superior, uint256 mintDSG);
-    event RedeemVDSG(address user, uint256 receiveDSG, uint256 burnDSG, uint256 feeDSG);
+    event RedeemVDSG(address user, uint256 receiveDSG, uint256 burnDSG, uint256 feeDSG, uint256 reserveDSG);
     event DonateDSG(address user, uint256 donateDSG);
     event SetCanTransfer(bool allowed);
 
@@ -94,11 +96,13 @@ contract vDSGToken is Ownable {
     constructor(
         address aggregator,
         address dsgToken,
-        address dsgTeam
+        address dsgTeam,
+        address dsgReserve
     ) public {
         _aggregator = aggregator;
         _dsgToken = dsgToken;
         _dsgTeam = dsgTeam;
+        _dsgReserve = dsgReserve;
 
         changePerReward(15*10**18);
     }
@@ -121,8 +125,20 @@ contract vDSGToken is Ownable {
         emit UpdateDSGFeeBurnRatio(_dsgFeeBurnRatio);
     }
 
+    function updateDSGFeeReserveRatio(uint256 dsgFeeReserve) public onlyOwner {
+        _dsgFeeReserveRatio = dsgFeeReserve;
+    }
+
     function updateAggregator(address aggregator) public onlyOwner {
         _aggregator = aggregator;
+    }
+
+    function updateTeamAddress(address team) public onlyOwner {
+        _dsgTeam = team;
+    }
+
+    function updateReserveAddress(address newAddress) public onlyOwner {
+        _dsgReserve = newAddress;
     }
     
     function setSuperiorMinDSG(uint256 val) public onlyOwner {
@@ -189,7 +205,7 @@ contract vDSGToken is Ownable {
 
         _redeem(user, stakingPower);
 
-        (uint256 dsgReceive, uint256 burnDsgAmount, uint256 withdrawFeeAmount) = getWithdrawResult(dsgAmount);
+        (uint256 dsgReceive, uint256 burnDsgAmount, uint256 withdrawFeeAmount, uint256 reserveAmount) = getWithdrawResult(dsgAmount);
 
         IERC20(_dsgToken).transfer(msg.sender, dsgReceive);
 
@@ -205,7 +221,7 @@ contract vDSGToken is Ownable {
             );
         }
 
-        emit RedeemVDSG(msg.sender, dsgReceive, burnDsgAmount, withdrawFeeAmount);
+        emit RedeemVDSG(msg.sender, dsgReceive, burnDsgAmount, withdrawFeeAmount, reserveAmount);
     }
 
     function donate(uint256 dsgAmount) public {
@@ -304,7 +320,8 @@ contract vDSGToken is Ownable {
     returns (
         uint256 dsgReceive,
         uint256 burnDsgAmount,
-        uint256 withdrawFeeDsgAmount
+        uint256 withdrawFeeDsgAmount,
+        uint256 reserveDsgAmount
     )
     {
         uint256 feeRatio = getDsgWithdrawFeeRatio();
@@ -313,7 +330,10 @@ contract vDSGToken is Ownable {
         dsgReceive = dsgAmount.sub(withdrawFeeDsgAmount);
 
         burnDsgAmount = DecimalMath.mulFloor(withdrawFeeDsgAmount, _dsgFeeBurnRatio);
+        reserveDsgAmount = DecimalMath.mulFloor(withdrawFeeDsgAmount, _dsgFeeReserveRatio);
+
         withdrawFeeDsgAmount = withdrawFeeDsgAmount.sub(burnDsgAmount);
+        withdrawFeeDsgAmount = withdrawFeeDsgAmount.sub(reserveDsgAmount);
     }
 
     function getDsgWithdrawFeeRatio() public view returns (uint256 feeRatio) {
