@@ -26,7 +26,7 @@ contract LiquidityPool is Ownable, IAsset {
         uint256 rewardPending; //Rewards that have been settled and pending
         uint256 accRewardAmount; // How many rewards the user has got.
         uint256 additionalNftId; //Nft used to increase revenue
-        uint256 additionalRate; //nft additional rate of reward, base 100000
+        uint256 additionalRate; //nft additional rate of reward, base 10000
         uint256 additionalAmount; //nft additional amount of share
     }
 
@@ -84,6 +84,9 @@ contract LiquidityPool is Ownable, IAsset {
     DSGToken public rewardToken;
     // reward tokens created per block.
     uint256 public rewardTokenPerBlock;
+
+    address public feeWallet;
+
     // Info of each pool.
     PoolInfo[] public poolInfo;
     // Info of each user that stakes LP tokens.
@@ -97,9 +100,8 @@ contract LiquidityPool is Ownable, IAsset {
     uint256 public startBlock;
     uint256 public halvingPeriod = 3952800; // half year
 
-    uint256 public ratePerNftPower = 10; //The share ratio that nft can increase per point of power
+    uint256[] public additionalRate = [200, 300, 500, 700, 1000, 1500]; //The share ratio that can be increased by each level of nft
     uint256 public nftSlotFee = 10e18; //Additional nft requires a card slot, enable the card slot requires fee
-    uint256 public maxNftAdditionalRate = 100000; //nft maximum increaseable share ratio
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -110,11 +112,13 @@ contract LiquidityPool is Ownable, IAsset {
     constructor(
         DSGToken _rewardToken,
         uint256 _rewardPerBlock,
-        uint256 _startBlock
+        uint256 _startBlock,
+        address _feeWallet
     ) public {
         rewardToken = _rewardToken;
         rewardTokenPerBlock = _rewardPerBlock;
         startBlock = _startBlock;
+        feeWallet = _feeWallet;
     }
 
     function phase(uint256 blockNumber) public view returns (uint256) {
@@ -179,15 +183,6 @@ contract LiquidityPool is Ownable, IAsset {
             })
         );
         LpOfPid[_lpToken] = getPoolLength() - 1;
-    }
-
-    function setRatePerNftPower(uint256 v) public onlyOwner {
-        require(v <= 1000, "v must < 1000");
-        ratePerNftPower = v;
-    }
-
-    function setMaxNftAdditionalRate(uint256 rate) public onlyOwner {
-        maxNftAdditionalRate = rate;
     }
 
     function setAdditionalNft(uint256 _pid, address _additionalNft) public onlyOwner {
@@ -293,14 +288,11 @@ contract LiquidityPool is Ownable, IAsset {
         require(user.additionalNftId == 0, "nft already set");
         updatePool(_pid);
 
-        uint256 power = IDsgNft(pool.additionalNft).getPower(nftId);
-        require(power > 0, "no power");
+        uint256 level = IDsgNft(pool.additionalNft).getLevel(nftId);
+        require(level > 0, "no level");
 
         if(nftSlotFee > 0) {
-            uint256 oldBal = rewardToken.balanceOf(address(this));
-            rewardToken.transferFrom(msg.sender, address(this), nftSlotFee);
-            uint256 fee = rewardToken.balanceOf(address(this)).sub(oldBal);
-            rewardToken.burn(fee);
+            rewardToken.transferFrom(msg.sender, feeWallet, nftSlotFee);
         }
 
         IDsgNft(pool.additionalNft).safeTransferFrom(msg.sender, address(this), nftId);
@@ -312,11 +304,9 @@ contract LiquidityPool is Ownable, IAsset {
         }
 
         user.additionalNftId = nftId;
-        user.additionalRate = power.mul(ratePerNftPower);
-        if(user.additionalRate > maxNftAdditionalRate) {
-            user.additionalRate = maxNftAdditionalRate;
-        }
-        user.additionalAmount = user.amount.mul(user.additionalRate).div(100000);
+        user.additionalRate = additionalRate[level];
+        
+        user.additionalAmount = user.amount.mul(user.additionalRate).div(10000);
         pool.totalAmount = pool.totalAmount.add(user.additionalAmount);
 
         user.rewardDebt = user.amount.add(user.additionalAmount).mul(pool.accRewardPerShare).div(1e12);
@@ -336,7 +326,7 @@ contract LiquidityPool is Ownable, IAsset {
             user.amount = user.amount.add(_amount);
             pool.totalAmount = pool.totalAmount.add(_amount);
             if(user.additionalRate > 0) {
-                uint256 _add = _amount.mul(user.additionalRate).div(100000);
+                uint256 _add = _amount.mul(user.additionalRate).div(10000);
                 user.additionalAmount = user.additionalAmount.add(_add);
                 pool.totalAmount = pool.totalAmount.add(_add);
             }

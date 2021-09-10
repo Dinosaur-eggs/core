@@ -2,18 +2,18 @@
 
 pragma solidity =0.6.12;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20Capped.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 
-contract FragmentToken is ERC20Capped, Ownable {
+contract FragmentToken is ERC20, Ownable {
 
     using EnumerableSet for EnumerableSet.AddressSet;
     EnumerableSet.AddressSet private _minters;
 
-    constructor(string memory name_, string memory symbol_, uint256 cap_) 
-    public ERC20Capped(cap_) ERC20(name_, symbol_) {
+    constructor(string memory name_, string memory symbol_) 
+    public ERC20(name_, symbol_) {
 
     }
 

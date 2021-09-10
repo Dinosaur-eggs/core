@@ -66,8 +66,8 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
     IERC20 private _token;
     address public _feeWallet;
 
-    uint256 private _upgradeFeeBase = 10**16;
     uint256[] private _levelBasePower = [1000, 2500, 6500, 14500, 35000, 90000];
+    uint256[] private _levelUpFee = [0, 500e18, 1200e18, 2400e18, 4800e18, 9600e18];
 
     mapping(uint256 => LibPart.Part[])  private _royalties; //tokenId : LibPart.Part[]
 
@@ -90,7 +90,7 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
     ) public {
         _tokenId = 1000;
         _levelBasePower = [1000, 2500, 6500, 14500, 35000, 90000];
-        _upgradeFeeBase = 10**16;
+        _levelUpFee = [0, 500e18, 1200e18, 2400e18, 4800e18, 9600e18];
         
         super._initialize();
         
@@ -119,14 +119,6 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
 
     function baseURI() public view override returns (string memory) {
         return _baseURIVar;
-    }
-
-    function getUpgradeFeeBase() public view override returns (uint256) {
-        return _upgradeFeeBase;
-    }
-
-    function setUpgradeFeeBase(uint256 fee) public onlyOwner {
-        _upgradeFeeBase = fee;
     }
 
     function setFeeWallet(address feeWallet_) public onlyOwner {
@@ -249,7 +241,7 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
     }
 
     function getUpgradeFee(uint256 newLevel) public view returns (uint256) {
-        return _upgradeFeeBase * _levelBasePower[newLevel-1];
+        return _levelUpFee[newLevel];
     }
 
     function upgradeNft(uint256 nftId, uint256 materialNftId) public override nonReentrant whenNotPaused
@@ -265,8 +257,8 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
         _burn(materialNftId);
 
         uint256 newLevel = nft.level + 1;
-        if (_upgradeFeeBase > 0) {
-            uint256 fee = getUpgradeFee(newLevel);
+        uint256 fee = getUpgradeFee(newLevel);
+        if (fee > 0) {
             _token.transferFrom(_msgSender(), _feeWallet, fee);
         }
 
@@ -279,6 +271,10 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
 
     function getPower(uint256 tokenId) public view override returns (uint256) {
         return _nfts[tokenId].power;
+    }
+
+    function getLevel(uint256 tokenId) public view override returns (uint256) {
+        return _nfts[tokenId].level;
     }
 
     function addMinter(address _addMinter) public onlyOwner returns (bool) {

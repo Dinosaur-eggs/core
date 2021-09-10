@@ -14,8 +14,6 @@ interface IDsgNft is IERC721 {
 
     function burn(uint256 tokenId) external;
 
-    function getUpgradeFeeBase() external view returns (uint256);
-
     function getFeeToken() external view returns (address);
 
     function getNft(uint256 id) external view returns (LibPart.NftInfo memory);
@@ -27,4 +25,6 @@ interface IDsgNft is IERC721 {
     function upgradeNft(uint256 nftId, uint256 materialNftId) external;
 
     function getPower(uint256 tokenId) external view returns (uint256);
+
+    function getLevel(uint256 tokenId) external view returns (uint256);
 }
