@@ -3,21 +3,29 @@ pragma solidity =0.6.12;
 
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "../interfaces/IDsgToken.sol";
+import "../libraries/SwapLibrary.sol";
+import "../interfaces/ISwapRouter02.sol";
 
 interface IvDsg {
     function donate(uint256 dsgAmount) external;
 }
 
 contract vDsgTreasury is Ownable {
+    using SafeERC20 for IERC20;
+
+    event Swap(address token0, address token1, uint256 amountIn, uint256 amountOut);
 
     using EnumerableSet for EnumerableSet.AddressSet;
     EnumerableSet.AddressSet private _callers;
 
+    address public factory;
     address public vdsg;
     address public dsg;
 
-    constructor(address _dsg, address _vdsg) public {
+    constructor(address _factory, address _dsg, address _vdsg) public {
+        factory = _factory;
         dsg = _dsg;
         vdsg = _vdsg;
     }
@@ -29,6 +37,31 @@ contract vDsgTreasury is Ownable {
 
         IDsgToken(dsg).approve(vdsg, _amount);
         IvDsg(vdsg).donate(_amount);
+    }
+
+    function _swap(
+        address _tokenIn,
+        address _tokenOut,
+        uint256 _amountIn,
+        address _to
+    ) internal returns (uint256 amountOut) {
+        address pair = SwapLibrary.pairFor(factory, _tokenIn, _tokenOut);
+        (uint256 reserve0, uint256 reserve1, ) = ISwapPair(pair).getReserves();
+
+        (uint256 reserveInput, uint256 reserveOutput) =
+            _tokenIn == ISwapPair(pair).token0() ? (reserve0, reserve1) : (reserve1, reserve0);
+        amountOut = SwapLibrary.getAmountOut(_amountIn, reserveInput, reserveOutput);
+        IERC20(_tokenIn).safeTransfer(pair, _amountIn);
+
+        _tokenIn == ISwapPair(pair).token0()
+            ? ISwapPair(pair).swap(0, amountOut, _to, new bytes(0))
+            : ISwapPair(pair).swap(amountOut, 0, _to, new bytes(0));
+
+        emit Swap(_tokenIn, _tokenOut, _amountIn, amountOut);
+    }
+
+    function anySwap(address _tokenIn, address _tokenOut, uint256 _amountIn) external onlyCaller {
+        _swap(_tokenIn, _tokenOut, _amountIn, address(this));
     }
 
     function emergencyWithdraw(address _token) public onlyOwner {
