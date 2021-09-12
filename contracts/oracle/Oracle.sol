@@ -183,6 +183,12 @@ contract Oracle is Ownable {
         return EnumerableSet.add(_routerTokens, _token);
     }
 
+    function addRouterTokens(address[] memory tokens) public onlyOwner {
+        for (uint i = 0; i < tokens.length; i++) {
+            addRouterToken(tokens[i]);
+        }
+    }
+
     function delRouterToken(address _token) public onlyOwner returns (bool) {
         require(_token != address(0), 'Oracle: address is zero');
         return EnumerableSet.remove(_routerTokens, _token);
