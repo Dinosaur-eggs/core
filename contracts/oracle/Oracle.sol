@@ -116,7 +116,7 @@ contract Oracle is Ownable {
         uint256 amount = 10**decimal;
         if (token == anchorToken) {
             price = amount;
-        } else if (SwapLibrary.pairFor(factory, token, anchorToken) != address(0)) {
+        } else if (ISwapFactory(factory).getPair(token, anchorToken) != address(0)) {
             price = consult(token, amount, anchorToken);
         } else {
             uint256 length = getRouterTokenLength();
