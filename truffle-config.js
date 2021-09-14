@@ -62,6 +62,16 @@ module.exports = {
       timeoutBlocks: 200,
       skipDryRun: true
     },
+    ropsten: {
+      provider: function() {
+        return new HDWalletProvider(privKey,`https://ropsten.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161`
+        )
+      },
+      network_id: 3,
+      confirmations: 0,
+      timeoutBlocks: 200,
+      skipDryRun: true
+    },
   },
 
   plugins: ["solidity-coverage"],

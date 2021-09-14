@@ -183,6 +183,11 @@ contract Treasury is InitializableOwner {
         _swap(_tokenIn, _tokenOut, _amountIn, address(this));
     }
 
+    function anySwapAll(address _tokenIn, address _tokenOut) external onlyCaller {
+        uint256 _amountIn = IERC20(_tokenIn).balanceOf(address(this));
+        _swap(_tokenIn, _tokenOut, _amountIn, address(this));
+    }
+
     function removeAndSwapTo(address _token0, address _token1, address _toToken) external onlyCaller {
         (address token0, address token1) = SwapLibrary.sortTokens(_token0, _token1);
         (uint256 amount0, uint256 amount1) = _removeLiquidity(token0, token1);

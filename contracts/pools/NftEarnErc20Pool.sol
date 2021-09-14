@@ -440,6 +440,11 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
         emit StakeWithSlot(msg.sender, slot, tokenIds);
     }
 
+    function slotReplace(uint slot, uint256[] memory newTokenIds) public {
+        withdrawSlot(slot);
+        slotStake(slot, newTokenIds);
+    }
+
     function onERC721Received(
         address operator,
         address, //from

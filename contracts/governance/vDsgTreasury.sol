@@ -64,6 +64,11 @@ contract vDsgTreasury is Ownable {
         _swap(_tokenIn, _tokenOut, _amountIn, address(this));
     }
 
+    function anySwapAll(address _tokenIn, address _tokenOut) external onlyCaller {
+        uint256 _amountIn = IERC20(_tokenIn).balanceOf(address(this));
+        _swap(_tokenIn, _tokenOut, _amountIn, address(this));
+    }
+
     function emergencyWithdraw(address _token) public onlyOwner {
         require(IERC20(_token).balanceOf(address(this)) > 0, "vDsgTreasury: insufficient contract balance");
         IERC20(_token).transfer(msg.sender, IERC20(_token).balanceOf(address(this)));
