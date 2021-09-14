@@ -211,7 +211,7 @@ contract Treasury is InitializableOwner {
         }
     }
 
-    function swap(address _token0, address _token1) external onlyCaller {
+    function swap(address _token0, address _token1) public onlyCaller {
         require(isStableCoin(_token0) || isStableCoin(_token1), "Treasury: must has a stable coin");
 
         (address token0, address token1) = SwapLibrary.sortTokens(_token0, _token1);
@@ -233,13 +233,17 @@ contract Treasury is InitializableOwner {
         totalFee = totalFee.add(amountOut);
     }
 
-    function distribute(uint256 _amount) external onlyCaller {
+    function getRemaining() public view onlyCaller returns(uint256 remaining) {
         uint256 pending = lpBonusAmount.add(nftBonusAmount).add(dsgLpBonusAmount).add(vDsgBonusAmount);
         uint256 bal = IERC20(USDT).balanceOf(address(this));
         if (bal <= pending) {
-            return;
+            return 0;
         }
-        uint256 remaining = bal.sub(pending);
+        remaining = bal.sub(pending);
+    }
+
+    function distribute(uint256 _amount) public onlyCaller {
+        uint256 remaining = getRemaining();
         if (_amount == 0) {
             _amount = remaining;
         }
@@ -330,7 +334,7 @@ contract Treasury is InitializableOwner {
         if (_nftRewardsBlocks > 0) {
             sendToNftPool(nftBonusAmount, _nftRewardsBlocks);
         }
-        
+
         if(pids.length > 0) {
             uint256 amount = dsgLpBonusAmount.div(pids.length);
             for (uint i = 0; i < pids.length; i++) {
