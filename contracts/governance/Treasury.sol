@@ -185,6 +185,9 @@ contract Treasury is InitializableOwner {
 
     function anySwapAll(address _tokenIn, address _tokenOut) public onlyCaller {
         uint256 _amountIn = IERC20(_tokenIn).balanceOf(address(this));
+        if(_amountIn == 0) {
+            return;
+        }
         _swap(_tokenIn, _tokenOut, _amountIn, address(this));
     }
 
