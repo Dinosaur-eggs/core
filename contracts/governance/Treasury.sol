@@ -325,8 +325,11 @@ contract Treasury is InitializableOwner {
 
     function sendAll(uint256 _nftRewardsBlocks, uint256[] memory pids) external onlyCaller {
         sendToLpPool(lpBonusAmount);
-        sendToNftPool(nftBonusAmount, _nftRewardsBlocks);
         sendToVDSG(vDsgBonusAmount);
+        
+        if (_nftRewardsBlocks > 0) {
+            sendToNftPool(nftBonusAmount, _nftRewardsBlocks);
+        }
         
         if(pids.length > 0) {
             uint256 amount = dsgLpBonusAmount.div(pids.length);
