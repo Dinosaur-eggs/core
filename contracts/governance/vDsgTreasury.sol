@@ -64,9 +64,16 @@ contract vDsgTreasury is Ownable {
         _swap(_tokenIn, _tokenOut, _amountIn, address(this));
     }
 
-    function anySwapAll(address _tokenIn, address _tokenOut) external onlyCaller {
+    function anySwapAll(address _tokenIn, address _tokenOut) public onlyCaller {
         uint256 _amountIn = IERC20(_tokenIn).balanceOf(address(this));
         _swap(_tokenIn, _tokenOut, _amountIn, address(this));
+    }
+
+    function batchAnySwapAll(address[] memory _tokenIns, address[] memory _tokenOuts) public onlyCaller {
+        require(_tokenIns.length == _tokenOuts.length, "lengths not match");
+        for (uint i = 0; i < _tokenIns.length; i++) {
+            anySwapAll(_tokenIns[i], _tokenOuts[i]);
+        }
     }
 
     function emergencyWithdraw(address _token) public onlyOwner {
