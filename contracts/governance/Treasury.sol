@@ -225,7 +225,10 @@ contract Treasury is InitializableOwner {
     }
 
     function distribute(uint256 _amount) external onlyCaller {
-        require(_amount < IERC20(USDT).balanceOf(address(this)), "Treasury: amount exceeds balance of contract");
+        if (_amount == 0) {
+            _amount = IERC20(USDT).balanceOf(address(this));
+        }
+        require(_amount <= IERC20(USDT).balanceOf(address(this)), "Treasury: amount exceeds balance of contract");
 
         uint256 curAmount = _amount;
 
