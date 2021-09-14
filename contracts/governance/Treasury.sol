@@ -188,7 +188,7 @@ contract Treasury is InitializableOwner {
         _swap(_tokenIn, _tokenOut, _amountIn, address(this));
     }
 
-    function removeAndSwapTo(address _token0, address _token1, address _toToken) external onlyCaller {
+    function removeAndSwapTo(address _token0, address _token1, address _toToken) public onlyCaller {
         (address token0, address token1) = SwapLibrary.sortTokens(_token0, _token1);
         (uint256 amount0, uint256 amount1) = _removeLiquidity(token0, token1);
 
@@ -200,6 +200,15 @@ contract Treasury is InitializableOwner {
         }
 
         emit RemoveAndSwapTo(token0, token1, _toToken, amount0, amount1);
+    }
+
+    function batchRemoveAndSwapTo(address[] memory _token0s, address[] memory _token1s, address[] memory _toTokens) public onlyCaller {
+        require(_token0s.length == _token1s.length, "lengths not match");
+        require(_token1s.length == _toTokens.length, "lengths not match");
+        
+        for (uint i = 0; i < _token0s.length; i++) {
+            removeAndSwapTo(_token0s[i], _token1s[i], _toTokens[i]);
+        }
     }
 
     function swap(address _token0, address _token1) external onlyCaller {
@@ -225,10 +234,16 @@ contract Treasury is InitializableOwner {
     }
 
     function distribute(uint256 _amount) external onlyCaller {
-        if (_amount == 0) {
-            _amount = IERC20(USDT).balanceOf(address(this));
+        uint256 pending = lpBonusAmount.add(nftBonusAmount).add(dsgLpBonusAmount).add(vDsgBonusAmount);
+        uint256 bal = IERC20(USDT).balanceOf(address(this));
+        if (bal <= pending) {
+            return;
         }
-        require(_amount <= IERC20(USDT).balanceOf(address(this)), "Treasury: amount exceeds balance of contract");
+        uint256 remaining = bal.sub(pending);
+        if (_amount == 0) {
+            _amount = remaining;
+        }
+        require(_amount <= remaining, "Treasury: amount exceeds remaining of contract");
 
         uint256 curAmount = _amount;
 
