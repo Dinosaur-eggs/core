@@ -226,22 +226,22 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
 
     function randomPower(uint256 level, uint256 seed ) internal view returns(uint256) {
         if (level == 1) {
-            return _levelBasePower[level-1] + seed % 200;
+            return _levelBasePower[0] + seed % 200;
         } else if (level == 2) {
-            return _levelBasePower[level-1] + seed % 500;
+            return _levelBasePower[1] + seed % 500;
         } else if (level == 3) {
-            return _levelBasePower[level-1] + seed % 500;
+            return _levelBasePower[2] + seed % 500;
         } else if (level == 4) {
-            return _levelBasePower[level-1] + seed % 500;
+            return _levelBasePower[3] + seed % 500;
         } else if (level == 5) {
-            return _levelBasePower[level-1] + seed % 5000;
+            return _levelBasePower[4] + seed % 5000;
         }
 
-        return _levelBasePower[6] + seed % 10000;
+        return _levelBasePower[5] + seed % 10000;
     }
 
     function getUpgradeFee(uint256 newLevel) public view returns (uint256) {
-        return _levelUpFee[newLevel];
+        return _levelUpFee[newLevel-1];
     }
 
     function upgradeNft(uint256 nftId, uint256 materialNftId) public override nonReentrant whenNotPaused

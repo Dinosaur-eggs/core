@@ -249,18 +249,18 @@ contract MysteryBox is ERC721, InitializableOwner {
 
     function randomPower(uint256 level, uint256 seed ) internal view returns(uint256) {
         if (level == 1) {
-            return _levelBasePower[level-1] + seed % 200;
+            return _levelBasePower[0] + seed % 200;
         } else if (level == 2) {
-            return _levelBasePower[level-1] + seed % 500;
+            return _levelBasePower[1] + seed % 500;
         } else if (level == 3) {
-            return _levelBasePower[level-1] + seed % 500;
+            return _levelBasePower[2] + seed % 500;
         } else if (level == 4) {
-            return _levelBasePower[level-1] + seed % 500;
+            return _levelBasePower[3] + seed % 500;
         } else if (level == 5) {
-            return _levelBasePower[level-1] + seed % 5000;
+            return _levelBasePower[4] + seed % 5000;
         }
 
-        return _levelBasePower[6] + seed % 10000;
+        return _levelBasePower[5] + seed % 10000;
     }
 
     function randomRes(uint256 seed, uint256 level, BoxFactory memory factory) 
