@@ -142,6 +142,9 @@ contract Treasury is InitializableOwner {
     function _removeLiquidity(address _token0, address _token1) internal returns (uint256 amount0, uint256 amount1) {
         address pair = SwapLibrary.pairFor(factory, _token0, _token1);
         uint256 liquidity = IERC20(pair).balanceOf(address(this));
+        if(liquidity == 0) {
+            return (0, 0);
+        }
         ISwapPair(pair).transfer(pair, liquidity);
         (amount0, amount1) = ISwapPair(pair).burn(address(this));
 
@@ -202,10 +205,10 @@ contract Treasury is InitializableOwner {
         (address token0, address token1) = SwapLibrary.sortTokens(_token0, _token1);
         (uint256 amount0, uint256 amount1) = _removeLiquidity(token0, token1);
 
-        if (token0 != _toToken) {
+        if (amount0 > 0 && token0 != _toToken) {
             _swap(token0, _toToken, amount0, address(this));
         }
-        if (token1 != _toToken) {
+        if (amount1 > 0 && token1 != _toToken) {
             _swap(token1, _toToken, amount1, address(this));
         }
 
