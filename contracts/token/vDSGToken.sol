@@ -22,8 +22,8 @@ contract vDSGToken is Ownable {
 
     uint256 public _MIN_PENALTY_RATIO_ = 15 * 10**16; // 15%
     uint256 public _MAX_PENALTY_RATIO_ = 80 * 10**16; // 80%
-    uint256 public _MIN_MINT_RATIO_ = 10**17; //10%
-    uint256 public _MAX_MINT_RATIO_ = 80**17; //80%
+    uint256 public _MIN_MINT_RATIO_ = 10 * 10**16; //10%
+    uint256 public _MAX_MINT_RATIO_ = 80 * 10**16; //80%
 
     mapping(address => mapping(address => uint256)) internal _allowed;
 
@@ -39,8 +39,8 @@ contract vDSGToken is Ownable {
     uint256 public _dsgPerBlock;
     uint256 public constant _superiorRatio = 10**17; // 0.1
     uint256 public constant _dsgRatio = 100; // 100
-    uint256 public _dsgFeeBurnRatio = 30**17; //0.3
-    uint256 public _dsgFeeReserveRatio = 20**17; //0.2
+    uint256 public _dsgFeeBurnRatio = 30 * 10**16; //30%
+    uint256 public _dsgFeeReserveRatio = 20 * 10**16; //20%
 
     // accounting
     uint112 public alpha = 10**18; // 1
