@@ -191,6 +191,10 @@ contract LiquidityPool is Ownable, IAsset {
         poolInfo[_pid].additionalNft = _additionalNft;
     }
 
+    function getAdditionalRates() public view returns(uint256[] memory) {
+        return additionalRate;
+    }
+
     // Update the given pool's reward token allocation point. Can only be called by the owner.
     function set(
         uint256 _pid,

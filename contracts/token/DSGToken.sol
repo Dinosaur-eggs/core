@@ -27,6 +27,7 @@ contract DSGToken is DelegateERC20, Ownable {
 
     constructor(address _teamWallet) public ERC20("Dinosaur Eggs Token", "DSG") {
         teamWallet = _teamWallet;
+        _mint(msg.sender, 20e18); //for init pool
     }
 
     function setTeamRate(uint256 rate) public onlyOwner {

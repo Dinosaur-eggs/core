@@ -103,7 +103,7 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
         enableSlotFee = fee;
     }
 
-    function rechargeDsg(uint256 amount, uint256 rewardsBlocks) public onlyCaller {
+    function recharge(uint256 amount, uint256 rewardsBlocks) public onlyCaller {
         updatePool();
 
         uint256 oldBal = dsgToken.balanceOf(address(this));

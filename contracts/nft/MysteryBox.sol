@@ -267,7 +267,7 @@ contract MysteryBox is ERC721, InitializableOwner {
     internal view returns(string memory resName, string memory nftName) {
         string memory prefix = factory.resPrefix;
         uint numBegin = 1;
-        uint numEnd = 10;
+        uint numEnd = 1;
 
         {
             ResInfo storage res = _res[factory.id][level];
@@ -282,10 +282,7 @@ contract MysteryBox is ERC721, InitializableOwner {
         }
 
         uint256 num = uint256(numEnd - numBegin);
-        if(num == 0) {
-            return (prefix, nftName);
-        }
-
+        
         num = seed / 3211 % (num+1) + uint256(numBegin);
         resName = string(abi.encodePacked(prefix, num.toString()));
     }

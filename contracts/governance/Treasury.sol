@@ -8,9 +8,10 @@ import "../libraries/SwapLibrary.sol";
 import "../interfaces/ISwapRouter02.sol";
 import "../interfaces/IDsgToken.sol";
 import "../governance/InitializableOwner.sol";
+import "../interfaces/IWOKT.sol";
 
 interface INftEarnErc20Pool {
-    function rechargeDsg(uint256 amount, uint256 rewardsBlocks) external;
+    function recharge(uint256 amount, uint256 rewardsBlocks) external;
 }
 
 interface ILiquidityPool {
@@ -29,6 +30,7 @@ contract Treasury is InitializableOwner {
     address public factory;
     address public router;
     address public USDT;
+    address public WETH;
     address public DSG;
     address public team;
     address public nftBonus;
@@ -86,6 +88,7 @@ contract Treasury is InitializableOwner {
         address _factory,
         address _router,
         address _usdt,
+        address _weth,
         address _dsg,
         address _vdsgTreasury,
         address _lpPool,
@@ -97,6 +100,7 @@ contract Treasury is InitializableOwner {
         factory = _factory;
         router = _router;
         USDT = _usdt;
+        WETH = _weth;
         DSG = _dsg;
         vDsgTreasury = _vdsgTreasury;
         lpBonus = _lpPool;
@@ -315,10 +319,10 @@ contract Treasury is InitializableOwner {
         require(_amountUSD <= nftBonusAmount, "Treasury: amount exceeds nft bonus amount");
         nftBonusAmount = nftBonusAmount.sub(_amountUSD);
 
-        uint256 _amount = swapUSDToDSG(_amountUSD);
+        uint256 _amount = swapUSDToWETH(_amountUSD);
 
-        IERC20(DSG).approve(nftBonus, _amount);
-        INftEarnErc20Pool(nftBonus).rechargeDsg(_amount, _rewardsBlocks);
+        IWOKT(WETH).approve(nftBonus, _amount);
+        INftEarnErc20Pool(nftBonus).recharge(_amount, _rewardsBlocks);
         emit NFTPoolTransfer(nftBonus, _amount);
     }
 
@@ -365,6 +369,12 @@ contract Treasury is InitializableOwner {
         uint256 balOld = IERC20(DSG).balanceOf(address(this));
         _swap(USDT, DSG, _amountUSD, address(this));
         amountOut = IERC20(DSG).balanceOf(address(this)).sub(balOld);
+    }
+
+    function swapUSDToWETH(uint256 _amountUSD) internal returns(uint256 amountOut) {
+        uint256 balOld = IERC20(WETH).balanceOf(address(this));
+        _swap(USDT, WETH, _amountUSD, address(this));
+        amountOut = IERC20(WETH).balanceOf(address(this)).sub(balOld);
     }
 
     function addCaller(address _newCaller) public onlyOwner returns (bool) {
