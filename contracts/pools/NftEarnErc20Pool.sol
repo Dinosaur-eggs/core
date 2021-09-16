@@ -6,15 +6,16 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Metadata.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "../interfaces/IDsgToken.sol";
 import "../interfaces/IDsgNft.sol";
+import "../interfaces/IERC20Metadata.sol";
 
 contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
-    using SafeERC20 for IDsgToken;
+    using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
@@ -37,6 +38,8 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
     struct PoolView {
         address dsgToken;
         uint8 dsgDecimals;
+        address rewardToken;
+        uint8 rewardDecimals;
         uint256 lastRewardBlock;
         uint256 rewardsPerBlock;
         uint256 accRewardPerShare;
@@ -49,8 +52,10 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
 
     uint constant MAX_LEVEL = 6;
 
-    IDsgToken public dsgToken;
-    uint256 public dsgTokenPerBlock;
+    IERC20 public dsgToken;
+    IERC20 public rewardToken;
+    address vdsgTreasury;
+    uint256 public rewardTokenPerBlock;
 
     IDsgNft public dsgNft; // Address of NFT token contract.
 
@@ -62,7 +67,7 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
     uint256 public startBlock;
 
     uint256 lastRewardBlock; //Last block number that TOKENs distribution occurs.
-    uint256 accDsgTokenPerShare; // Accumulated TOKENs per share, times 1e12. See below.
+    uint256 accRewardTokenPerShare; // Accumulated TOKENs per share, times 1e12. See below.
     uint256 accShare;
     uint256 allocRewardAmount; //Total number of rewards to be claimed
     uint256 accRewardAmount; //Total number of rewards
@@ -80,13 +85,17 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
 
     constructor(
         address _dsgToken,
+        address _rewardToken,
         address _nftAddress,
-        uint256 _dsgTokenPerBlock,
+        address _vdsgTreasury,
+        uint256 _rewardTokenPerBlock,
         uint256 _startBlock
     ) public {
-        dsgToken = IDsgToken(_dsgToken);
+        dsgToken = IERC20(_dsgToken);
         dsgNft = IDsgNft(_nftAddress);
-        dsgTokenPerBlock = _dsgTokenPerBlock;
+        rewardToken = IERC20(_rewardToken);
+        vdsgTreasury = _vdsgTreasury;
+        rewardTokenPerBlock = _rewardTokenPerBlock;
         startBlock = _startBlock;
     }
 
@@ -106,25 +115,25 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
     function recharge(uint256 amount, uint256 rewardsBlocks) public onlyCaller {
         updatePool();
 
-        uint256 oldBal = dsgToken.balanceOf(address(this));
+        uint256 oldBal = rewardToken.balanceOf(address(this));
         uint256 remainingBal = oldBal - allocRewardAmount;
-        if(remainingBal > 0 && dsgTokenPerBlock > 0) {
-            uint256 remainingBlocks = remainingBal.div(dsgTokenPerBlock);
+        if(remainingBal > 0 && rewardTokenPerBlock > 0) {
+            uint256 remainingBlocks = remainingBal.div(rewardTokenPerBlock);
             rewardsBlocks = rewardsBlocks.add(remainingBlocks);
         }
 
-        dsgToken.safeTransferFrom(msg.sender, address(this), amount);
-        dsgTokenPerBlock = dsgToken.balanceOf(address(this)).div(rewardsBlocks);
+        rewardToken.safeTransferFrom(msg.sender, address(this), amount);
+        rewardTokenPerBlock = rewardToken.balanceOf(address(this)).div(rewardsBlocks);
     }
 
     // View function to see pending STARs on frontend.
     function pendingToken(address _user) external view returns (uint256) {
         UserInfo storage user = userInfo[_user];
-        uint256 accTokenPerShare = accDsgTokenPerShare;
+        uint256 accTokenPerShare = accRewardTokenPerShare;
 
         if (block.number > lastRewardBlock && accShare != 0) {
             uint256 multiplier = getMultiplier(lastRewardBlock, block.number);
-            uint256 tokenReward = multiplier.mul(dsgTokenPerBlock);
+            uint256 tokenReward = multiplier.mul(rewardTokenPerBlock);
             accTokenPerShare = accTokenPerShare.add(
                 tokenReward.mul(1e12).div(accShare)
             );
@@ -135,22 +144,24 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
     function getPoolInfo() public view
     returns (
         uint256 accShare_,
-        uint256 accDsgTokenPerShare_,
-        uint256 dsgTokenPerBlock_
+        uint256 accRewardTokenPerShare_,
+        uint256 rewardTokenPerBlock_
     )
     {
         accShare_ = accShare;
-        accDsgTokenPerShare_ = accDsgTokenPerShare;
-        dsgTokenPerBlock_ = dsgTokenPerBlock;
+        accRewardTokenPerShare_ = accRewardTokenPerShare;
+        rewardTokenPerBlock_ = rewardTokenPerBlock;
     }
 
     function getPoolView() public view returns(PoolView memory) {
         return PoolView({
             dsgToken: address(dsgToken),
-            dsgDecimals: dsgToken.decimals(),
+            dsgDecimals: IERC20Metadata(address(dsgToken)).decimals(),
+            rewardToken: address(rewardToken),
+            rewardDecimals: IERC20Metadata(address(rewardToken)).decimals(),
             lastRewardBlock: lastRewardBlock,
-            rewardsPerBlock: dsgTokenPerBlock,
-            accRewardPerShare: accDsgTokenPerShare,
+            rewardsPerBlock: rewardTokenPerBlock,
+            accRewardPerShare: accRewardTokenPerShare,
             allocRewardAmount: allocRewardAmount,
             accRewardAmount: accRewardAmount,
             totalAmount: dsgNft.balanceOf(address(this)),
@@ -169,12 +180,12 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
             return;
         }
         uint256 multiplier = getMultiplier(lastRewardBlock, block.number);
-        uint256 dsgTokenReward = multiplier.mul(dsgTokenPerBlock);
-        accDsgTokenPerShare = accDsgTokenPerShare.add(
-            dsgTokenReward.mul(1e12).div(accShare)
+        uint256 rewardTokenReward = multiplier.mul(rewardTokenPerBlock);
+        accRewardTokenPerShare = accRewardTokenPerShare.add(
+            rewardTokenReward.mul(1e12).div(accShare)
         );
-        allocRewardAmount = allocRewardAmount.add(dsgTokenReward);
-        accRewardAmount = accRewardAmount.add(dsgTokenReward);
+        allocRewardAmount = allocRewardAmount.add(rewardTokenReward);
+        accRewardAmount = accRewardAmount.add(rewardTokenReward);
 
         lastRewardBlock = block.number;
     }
@@ -245,7 +256,7 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
         uint256 oldBal = dsgToken.balanceOf(address(this));
         dsgToken.safeTransferFrom(msg.sender, address(this), enableSlotFee);
         uint256 amount = dsgToken.balanceOf(address(this)).sub(oldBal);
-        dsgToken.burn(amount);
+        dsgToken.transfer(vdsgTreasury, amount);
 
         user.slots += 1;
     }
@@ -256,14 +267,14 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
         UserInfo storage user = userInfo[msg.sender];
 
         uint256 pending =
-        user.share.mul(accDsgTokenPerShare).div(1e12).sub(
+        user.share.mul(accRewardTokenPerShare).div(1e12).sub(
             user.rewardDebt
         );
         safeTokenTransfer(msg.sender, pending);
 
         allocRewardAmount = allocRewardAmount.sub(pending);
         user.accRewardAmount = user.accRewardAmount.add(pending);
-        user.rewardDebt = user.share.mul(accDsgTokenPerShare).div(1e12);
+        user.rewardDebt = user.share.mul(accRewardTokenPerShare).div(1e12);
     }
 
     function withdraw(uint256 _tokenId) public {
@@ -280,7 +291,7 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
         uint256 power = getNftPower(_tokenId);
         accShare = accShare.sub(power);
         user.share = user.share.sub(power);
-        user.rewardDebt = user.share.mul(accDsgTokenPerShare).div(1e12);
+        user.rewardDebt = user.share.mul(accRewardTokenPerShare).div(1e12);
         dsgNft.transferFrom(address(this), address(msg.sender), _tokenId);
         emit Withdraw(msg.sender, _tokenId);
     }
@@ -333,7 +344,7 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
 
         accShare = accShare.sub(totalPower);
         user.share = user.share.sub(totalPower);
-        user.rewardDebt = user.share.mul(accDsgTokenPerShare).div(1e12);
+        user.rewardDebt = user.share.mul(accRewardTokenPerShare).div(1e12);
         emit WithdrawSlot(msg.sender, slot);
     }
 
@@ -365,13 +376,13 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
     }
 
     function safeTokenTransfer(address _to, uint256 _amount) internal {
-        uint256 tokenBal = dsgToken.balanceOf(address(this));
+        uint256 tokenBal = rewardToken.balanceOf(address(this));
         if (_amount > tokenBal) {
             if (tokenBal > 0) {
-                dsgToken.transfer(_to, tokenBal);
+                rewardToken.transfer(_to, tokenBal);
             }
         } else {
-            dsgToken.transfer(_to, _amount);
+            rewardToken.transfer(_to, _amount);
         }
     }
 
@@ -399,7 +410,7 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
 
         uint256 power = getNftPower(tokenId);
         user.share = user.share.add(power);
-        user.rewardDebt = user.share.mul(accDsgTokenPerShare).div(1e12);
+        user.rewardDebt = user.share.mul(accRewardTokenPerShare).div(1e12);
         accShare = accShare.add(power);
         emit Stake(msg.sender, tokenId);
     }
@@ -435,7 +446,7 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
         }
         totalPower = totalPower.add(totalPower.mul(slotAdditionRate).div(10000));
         user.share = user.share.add(totalPower);
-        user.rewardDebt = user.share.mul(accDsgTokenPerShare).div(1e12);
+        user.rewardDebt = user.share.mul(accRewardTokenPerShare).div(1e12);
         accShare = accShare.add(totalPower);
         emit StakeWithSlot(msg.sender, slot, tokenIds);
     }
