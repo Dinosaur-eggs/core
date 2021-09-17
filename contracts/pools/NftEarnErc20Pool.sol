@@ -77,8 +77,8 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
     uint256 accRewardAmount; //Total number of rewards
 
 
-    uint256 public slotAdditionRate = 3000; //30%
-    uint256 public enableSlotFee = 10e18; //10dsg
+    uint256 public slotAdditionRate = 40000; //400%
+    uint256 public enableSlotFee = 10000e18; //10000dsg
 
     event Stake(address indexed user, uint256 tokenId);
     event StakeWithSlot(address indexed user, uint slot, uint256[] tokenIds);
