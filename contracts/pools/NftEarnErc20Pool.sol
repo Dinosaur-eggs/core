@@ -13,6 +13,8 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "../interfaces/IDsgNft.sol";
 import "../interfaces/IERC20Metadata.sol";
+import "../interfaces/IWOKT.sol";
+import "../libraries/TransferHelper.sol";
 
 contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -55,6 +57,7 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
     IERC20 public dsgToken;
     IERC20 public rewardToken;
     address vdsgTreasury;
+    address public immutable WOKT;
     uint256 public rewardTokenPerBlock;
 
     IDsgNft public dsgNft; // Address of NFT token contract.
@@ -84,6 +87,7 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
     event EmergencyWithdrawSlot(address indexed user, uint slot);
 
     constructor(
+        address _wokt,
         address _dsgToken,
         address _rewardToken,
         address _nftAddress,
@@ -91,6 +95,7 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
         uint256 _rewardTokenPerBlock,
         uint256 _startBlock
     ) public {
+        WOKT = _wokt;
         dsgToken = IERC20(_dsgToken);
         dsgNft = IDsgNft(_nftAddress);
         rewardToken = IERC20(_rewardToken);
@@ -379,10 +384,16 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
         uint256 tokenBal = rewardToken.balanceOf(address(this));
         if (_amount > tokenBal) {
             if (tokenBal > 0) {
-                rewardToken.transfer(_to, tokenBal);
+                _amount = tokenBal;
             }
-        } else {
-            rewardToken.transfer(_to, _amount);
+        }
+        if(_amount>0) {
+            if (address(rewardToken) == WOKT) {
+                IWOKT(WOKT).withdraw(_amount);
+                TransferHelper.safeTransferETH(_to, _amount);
+            } else {
+                rewardToken.transfer(_to, _amount);
+            }
         }
     }
 
@@ -499,5 +510,9 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
     modifier onlyCaller() {
         require(isCaller(msg.sender), "NftEarnErc20Pool: not the caller");
         _;
+    }
+
+    receive() external payable {
+        assert(msg.sender == WOKT); // only accept OKT via fallback from the WOKT contract
     }
 }
