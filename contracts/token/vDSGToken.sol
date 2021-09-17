@@ -58,6 +58,7 @@ contract vDSGToken is Ownable {
         uint128 superiorSP;
         address superior;
         uint256 credit;
+        uint256 creditDebt;
     }
 
     // ============ Events ============
@@ -419,14 +420,26 @@ contract vDSGToken is Ownable {
             userCreditSP = from.stakingPower;
             from.stakingPower = 0;
         }
+        from.creditDebt = from.creditDebt.add(from.credit);
         from.credit = 0;
 
         // superior decrease sp = min(stakingPower*0.1, from.superiorSP)
         uint256 superiorDecreSP = DecimalMath.mulFloor(stakingPower, _superiorRatio);
         superiorDecreSP = from.superiorSP <= superiorDecreSP ? from.superiorSP : superiorDecreSP;
         from.superiorSP = uint128(uint256(from.superiorSP).sub(superiorDecreSP));
+        uint256 superiorDecreCredit = DecimalMath.mulFloor(superiorDecreSP, alpha);
 
         UserInfo storage superior = userInfo[from.superior];
+        if(superiorDecreCredit > superior.creditDebt) {
+            uint256 dec = DecimalMath.divFloor(superior.creditDebt, alpha);
+            superiorDecreSP = dec >= superiorDecreSP ? 0 : superiorDecreSP.sub(dec);
+            superiorDecreCredit = superiorDecreCredit.sub(superior.creditDebt);
+            superior.creditDebt = 0;
+        } else {
+            superior.creditDebt = superior.creditDebt.sub(superiorDecreCredit);
+            superiorDecreCredit = 0;
+            superiorDecreSP = 0;
+        }
         uint256 creditSP = DecimalMath.divFloor(superior.credit, alpha);
 
         if (superiorDecreSP >= creditSP) {
@@ -434,7 +447,7 @@ contract vDSGToken is Ownable {
             superior.stakingPower = uint128(uint256(superior.stakingPower).sub(creditSP));
         } else {
             superior.credit = uint128(
-                uint256(superior.credit).sub(DecimalMath.mulFloor(superiorDecreSP, alpha))
+                uint256(superior.credit).sub(superiorDecreCredit)
             );
             superior.stakingPower = uint128(uint256(superior.stakingPower).sub(superiorDecreSP));
         }
