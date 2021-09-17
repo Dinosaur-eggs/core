@@ -201,6 +201,9 @@ contract vDSGToken is Ownable {
         if (burnDsgAmount > 0) {
             IDsgToken(_dsgToken).burn(burnDsgAmount);
         }
+        if (reserveAmount > 0) {
+            IDsgToken(_dsgToken).transfer(_dsgReserve, reserveAmount);
+        }
 
         if (withdrawFeeAmount > 0) {
             alpha = uint112(
