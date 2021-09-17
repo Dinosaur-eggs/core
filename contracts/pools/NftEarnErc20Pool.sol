@@ -128,15 +128,23 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
 
         rewardToken.safeTransferFrom(msg.sender, address(this), amount);
         rewardTokenPerBlock = rewardToken.balanceOf(address(this)).div(rewardsBlocks);
+        if(block.number >= startBlock) {
+            endBlock = block.number.add(rewardsBlocks);
+        } else {
+            endBlock = startBlock.add(rewardsBlocks);
+        }
     }
 
     // View function to see pending STARs on frontend.
     function pendingToken(address _user) external view returns (uint256) {
         UserInfo storage user = userInfo[_user];
         uint256 accTokenPerShare = accRewardTokenPerShare;
-
-        if (block.number > lastRewardBlock && accShare != 0) {
-            uint256 multiplier = getMultiplier(lastRewardBlock, block.number);
+        uint256 blk = block.number;
+        if(blk > endBlock) {
+            blk = endBlock;
+        }
+        if (blk > lastRewardBlock && accShare != 0) {
+            uint256 multiplier = getMultiplier(lastRewardBlock, blk);
             uint256 tokenReward = multiplier.mul(rewardTokenPerBlock);
             accTokenPerShare = accTokenPerShare.add(
                 tokenReward.mul(1e12).div(accShare)
@@ -175,15 +183,20 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
     }
 
     function updatePool() public {
-        if (block.number <= lastRewardBlock) {
+        uint256 blk = block.number;
+        if(blk > endBlock) {
+            blk = endBlock;
+        }
+
+        if (blk <= lastRewardBlock) {
             return;
         }
 
         if (accShare == 0) {
-            lastRewardBlock = block.number;
+            lastRewardBlock = blk;
             return;
         }
-        uint256 multiplier = getMultiplier(lastRewardBlock, block.number);
+        uint256 multiplier = getMultiplier(lastRewardBlock, blk);
         uint256 rewardTokenReward = multiplier.mul(rewardTokenPerBlock);
         accRewardTokenPerShare = accRewardTokenPerShare.add(
             rewardTokenReward.mul(1e12).div(accShare)
@@ -191,7 +204,7 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
         allocRewardAmount = allocRewardAmount.add(rewardTokenReward);
         accRewardAmount = accRewardAmount.add(rewardTokenReward);
 
-        lastRewardBlock = block.number;
+        lastRewardBlock = blk;
     }
 
     function getUserInfo(address _user) public view
