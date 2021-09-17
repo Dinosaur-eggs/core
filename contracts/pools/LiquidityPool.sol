@@ -9,10 +9,9 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../token/DSGToken.sol";
 import "../interfaces/ISwapPair.sol";
-import "../interfaces/IAsset.sol";
 import "../interfaces/IDsgNft.sol";
 
-contract LiquidityPool is Ownable, IAsset {
+contract LiquidityPool is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
@@ -28,13 +27,6 @@ contract LiquidityPool is Ownable, IAsset {
         uint256 additionalNftId; //Nft used to increase revenue
         uint256 additionalRate; //nft additional rate of reward, base 10000
         uint256 additionalAmount; //nft additional amount of share
-    }
-
-    struct UserAssetData {
-        uint256 totalDeposit;
-        uint256 totalFrozen;
-        mapping(address => uint256) frozenAmount;
-        mapping(address => uint256) allowances;
     }
 
     struct UserView {
@@ -91,7 +83,6 @@ contract LiquidityPool is Ownable, IAsset {
     PoolInfo[] public poolInfo;
     // Info of each user that stakes LP tokens.
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
-    mapping(address => mapping(address => UserAssetData)) private userAssetData;
     // pid corresponding address
     mapping(address => uint256) public LpOfPid;
     // Total allocation points. Must be the sum of all allocation points in all pools.
@@ -535,95 +526,7 @@ contract LiquidityPool is Ownable, IAsset {
         return views;
     }
 
-    function approve(
-        address _spender,
-        address _asset,
-        uint256 _amount
-    ) external override returns (bool) {
-        require(msg.sender != address(0), "IAsset: approve from the zero address");
-        require(_spender != address(0), "IAsset: approve to the zero address");
-        require(
-            _amount >= userAssetData[msg.sender][_asset].frozenAmount[_spender],
-            "IAsset: approve amount less than freezedAmount"
-        );
-        userAssetData[msg.sender][_asset].allowances[_spender] = _amount;
-        emit Approve(msg.sender, _spender, _asset, _amount);
-        return true;
-    }
-
-    function freezeAsset(
-        address _user,
-        address _asset,
-        uint256 _amount
-    ) external override returns (bool) {
-        require(
-            userAssetData[_user][_asset].allowances[msg.sender] >=
-                userAssetData[_user][_asset].frozenAmount[msg.sender].add(_amount),
-            "IAsset: freeze must less than allowanced"
-        );
-        require(getUserAvailableAsset(_user, _asset) >= _amount, "IAsset: there is not enough asset to be freezed");
-
-        UserAssetData storage data = userAssetData[_user][_asset];
-        data.totalFrozen = data.totalFrozen.add(_amount);
-        data.frozenAmount[msg.sender] = data.frozenAmount[msg.sender].add(_amount);
-        emit FreezeAsset(_user, _asset, _amount);
-        return true;
-    }
-
-    function unfreezeAsset(
-        address _user,
-        address _asset,
-        uint256 _amount
-    ) external override returns (bool) {
-        UserAssetData storage data = userAssetData[_user][_asset];
-        require(data.frozenAmount[msg.sender] >= _amount, "IAsset: there is not enough frezon asset to be unfreezed");
-
-        data.totalFrozen = data.totalFrozen.sub(_amount);
-        data.frozenAmount[msg.sender] = data.frozenAmount[msg.sender].sub(_amount);
-        emit UnfreezeAsset(_user, _asset, _amount);
-        return true;
-    }
-
-    function transferFrom(
-        address _from,
-        address _receiver,
-        address _asset,
-        uint256 _amount
-    ) external override returns (bool) {
-        require(
-            userAssetData[_from][_asset].allowances[msg.sender] >= _amount,
-            "IAsset: amount over than the allowance"
-        );
-        require(
-            userAssetData[_from][_asset].frozenAmount[msg.sender] >= _amount,
-            "IAsset: amount over than the frozen asset"
-        );
-        require(
-            ERC20(_asset).balanceOf(address(this)) >= _amount,
-            "IAsset: there is not enough frozen asset to transfer"
-        );
-
-        UserAssetData storage data = userAssetData[_from][_asset];
-        data.totalDeposit = data.totalDeposit.sub(_amount);
-        data.totalFrozen = data.totalFrozen.sub(_amount);
-        data.frozenAmount[msg.sender] = data.frozenAmount[msg.sender].sub(_amount);
-        data.allowances[msg.sender] = data.allowances[msg.sender].sub(_amount);
-        ERC20(_asset).safeTransfer(_receiver, _amount);
-        emit TransferFrom(_from, _receiver, _asset, _amount);
-        return true;
-    }
-
-    function getUserAsset(address _user, address _asset) external view override returns (uint256) {
-        return userAssetData[_user][_asset].totalDeposit;
-    }
-
-    function getUserAvailableAsset(address _user, address _asset) public view override returns (uint256) {
-        UserAssetData memory data = userAssetData[_user][_asset];
-        uint256 result = data.totalDeposit.sub(data.totalFrozen);
-        return result;
-    }
-
-    function onERC721Received(address operator, address from, uint256 tokenId, bytes memory data) public returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes memory) public returns (bytes4) {
         return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
     }
 }

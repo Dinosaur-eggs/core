@@ -68,6 +68,7 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
     EnumerableSet.AddressSet private _callers;
 
     uint256 public startBlock;
+    uint256 public endBlock;
 
     uint256 lastRewardBlock; //Last block number that TOKENs distribution occurs.
     uint256 accRewardTokenPerShare; // Accumulated TOKENs per share, times 1e12. See below.
@@ -92,7 +93,6 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
         address _rewardToken,
         address _nftAddress,
         address _vdsgTreasury,
-        uint256 _rewardTokenPerBlock,
         uint256 _startBlock
     ) public {
         WOKT = _wokt;
@@ -100,7 +100,6 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
         dsgNft = IDsgNft(_nftAddress);
         rewardToken = IERC20(_rewardToken);
         vdsgTreasury = _vdsgTreasury;
-        rewardTokenPerBlock = _rewardTokenPerBlock;
         startBlock = _startBlock;
     }
 
