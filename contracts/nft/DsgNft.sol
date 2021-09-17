@@ -193,7 +193,7 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
     ) internal returns(uint256) {
         _tokenId++;
         if(bytes(nftName).length == 0) {
-            nftName = string(abi.encodePacked(name(), _tokenId.toString()));
+            nftName = name();
         }
 
         _mint(to, _tokenId);
