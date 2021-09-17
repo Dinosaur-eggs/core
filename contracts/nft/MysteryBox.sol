@@ -232,7 +232,7 @@ contract MysteryBox is ERC721, InitializableOwner {
 
     // 81.92 12.23 3.5 1.5 0.6 0.25
     function getLevel(uint256 seed) internal pure returns(uint256) {
-        uint256 val = seed / 8897 % 1000;
+        uint256 val = seed / 8897 % 10000;
         if(val <= 8192) {
             return 1;
         } else if (val < 9415) {
