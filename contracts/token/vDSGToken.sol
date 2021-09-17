@@ -199,7 +199,7 @@ contract vDSGToken is Ownable {
         IERC20(_dsgToken).transfer(msg.sender, dsgReceive);
 
         if (burnDsgAmount > 0) {
-            IERC20(_dsgToken).transfer(address(0), burnDsgAmount);
+            IDsgToken(_dsgToken).burn(burnDsgAmount);
         }
 
         if (withdrawFeeAmount > 0) {
