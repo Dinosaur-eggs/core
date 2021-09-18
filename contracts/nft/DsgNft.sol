@@ -141,8 +141,28 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
         return _nfts[id];
     }
 
+    function setDefaultRoyalty(address payable account, uint96 value) public onlyOwner {
+        uint256 old = sumRoyalties(0);
+
+        if(_royalties[0].length > 0) {
+            _royalties[0][0] = LibPart.Part(account, value);
+        } else {
+            _royalties[0].push(LibPart.Part(account, value));
+        }
+        
+        emit RoyaltiesUpdated(0, old, sumRoyalties(0));
+    }
+
+    function getDefultRoyalty() public view returns(LibPart.Part memory) {
+        return _royalties[0][0];
+    }
+
     function getRoyalties(uint256 tokenId) public view override returns (LibPart.Part[] memory) {
-        return _royalties[tokenId];
+        LibPart.Part[] memory ret = _royalties[tokenId];
+        if (ret.length == 0) {
+            return _royalties[0];
+        }
+        return ret;
     }
 
     function sumRoyalties(uint256 tokenId) public view override returns(uint256) {
