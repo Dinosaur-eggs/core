@@ -105,7 +105,7 @@ contract NFTMarket is Context, IERC721Receiver, ReentrancyGuard, InitializableOw
     function initialize(address payable tipsFeeWallet, address weth) public {
         super._initialize();
 
-        _tipsFeeRate = 20;
+        _tipsFeeRate = 50;
         _baseRate = 1000;
         _minDurationTime = 5 minutes;
         _tipsFeeWallet = tipsFeeWallet;
