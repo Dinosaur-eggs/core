@@ -137,7 +137,7 @@ contract vDSGToken is Ownable {
 
     function emergencyWithdraw() public onlyOwner {
         uint256 dsgBalance = IERC20(_dsgToken).balanceOf(address(this));
-        IERC20(_dsgToken).transfer(owner(), dsgBalance);
+        IERC20(_dsgToken).safeTransfer(owner(), dsgBalance);
     }
 
     // ============ Mint & Redeem & Donate ============
@@ -197,13 +197,13 @@ contract vDSGToken is Ownable {
 
         (uint256 dsgReceive, uint256 burnDsgAmount, uint256 withdrawFeeAmount, uint256 reserveAmount) = getWithdrawResult(dsgAmount);
 
-        IERC20(_dsgToken).transfer(msg.sender, dsgReceive);
+        IERC20(_dsgToken).safeTransfer(msg.sender, dsgReceive);
 
         if (burnDsgAmount > 0) {
             IDsgToken(_dsgToken).burn(burnDsgAmount);
         }
         if (reserveAmount > 0) {
-            IDsgToken(_dsgToken).transfer(_dsgReserve, reserveAmount);
+            IERC20(_dsgToken).safeTransfer(_dsgReserve, reserveAmount);
         }
 
         if (withdrawFeeAmount > 0) {
@@ -362,13 +362,13 @@ contract vDSGToken is Ownable {
         // y = 5% (x > 0.5)
         // y = 0.175 - 0.25 * x
 
-        if (input < _MIN_MINT_RATIO_) {
+        if (input <= _MIN_MINT_RATIO_) {
             return _MAX_PENALTY_RATIO_;
-        } else if (input > _MAX_MINT_RATIO_) {
+        } else if (input >= _MAX_MINT_RATIO_) {
             return _MIN_PENALTY_RATIO_;
         } else {
-            uint256 step = (_MAX_PENALTY_RATIO_ - _MIN_PENALTY_RATIO_) / ( (_MAX_MINT_RATIO_-_MIN_MINT_RATIO_)/10**16 ) / 10;
-            return _MAX_PENALTY_RATIO_ + step - DecimalMath.mulFloor(input, step);
+            uint256 step = (_MAX_PENALTY_RATIO_ - _MIN_PENALTY_RATIO_) * 10 / ((_MAX_MINT_RATIO_ - _MIN_MINT_RATIO_) / 1e16);
+            return _MAX_PENALTY_RATIO_ + step - DecimalMath.mulFloor(input, step*10);
         }
     }
 

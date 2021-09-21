@@ -233,6 +233,7 @@ contract Erc20EarnNftPool is Ownable, IERC721Receiver {
         emit HarvestEvent(_pid, msg.sender, tokenId);
     }
 
+    /*
     function withdrawTokenByOwner(uint256 _pid, uint256 _sid, address _to) external onlyOwner validatePoolByPid(_pid) {
         require(_sid < user[_pid][_to].length, "staking is not existed");
 
@@ -244,6 +245,7 @@ contract Erc20EarnNftPool is Ownable, IERC721Receiver {
         token.safeTransfer(_to, amount);
     }
 
+    
     function withdrawNftByOwner(uint256 _pid, uint256 _tokenId, address _to) external onlyOwner validatePoolByPid(_pid) {
         require(pool[_pid].nftLeft > 0, "no available NFT to withdraw");
         uint idx = 0;
@@ -262,6 +264,7 @@ contract Erc20EarnNftPool is Ownable, IERC721Receiver {
         }
         require(found, "NFT is not existed in pool");
     }
+    */
 
     function getUserStakeCnt(uint256 _pid, address _userAddr) public view validatePoolByPid(_pid) returns(uint) {
         return user[_pid][_userAddr].length;

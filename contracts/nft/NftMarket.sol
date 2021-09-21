@@ -83,7 +83,7 @@ contract NFTMarket is Context, IERC721Receiver, ReentrancyGuard, InitializableOw
 
     uint256 public _minDurationTime = 5 minutes;
     
-    address WETH;
+    address public WETH;
 
     mapping(address => bool) public _seller;
     mapping(address => bool) public _verifySeller;
@@ -123,12 +123,12 @@ contract NFTMarket is Context, IERC721Receiver, ReentrancyGuard, InitializableOw
     }
 
     modifier checkindex(uint index) {
-        require(index <= _salesObjects.length, "overflow");
+        require(index < _salesObjects.length, "overflow");
         _;
     }
 
     modifier checkTime(uint index) {
-        require(index <= _salesObjects.length, "overflow");
+        require(index < _salesObjects.length, "overflow");
         SalesObject storage obj = _salesObjects[index];
         require(obj.startTime <= block.timestamp, "!open");
         _;
@@ -326,6 +326,9 @@ contract NFTMarket is Context, IERC721Receiver, ReentrancyGuard, InitializableOw
         payable 
     {
         SalesObject storage obj = _salesObjects[index];
+        require(obj.status == 0, "bad status");
+        obj.status = 1;
+
         uint256 price = this.getSalesPrice(index);
         uint256 tipsFee = price.mul(_tipsFeeRate).div(_baseRate);
         uint256 purchase = price.sub(tipsFee);
@@ -379,8 +382,6 @@ contract NFTMarket is Context, IERC721Receiver, ReentrancyGuard, InitializableOw
         
         obj.buyer = payable(msg.sender);
         obj.finalPrice = price;
-
-        obj.status = 1;
 
         // fire event
         emit eveSales(index, obj.tokenId, msg.sender, currencyAddr, price, tipsFee, royaltiesAmount, block.timestamp);

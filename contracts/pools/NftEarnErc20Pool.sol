@@ -183,6 +183,11 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
     }
 
     function updatePool() public {
+        if(block.number < startBlock) {
+            lastRewardBlock = startBlock;
+            return;
+        }
+
         uint256 blk = block.number;
         if(blk > endBlock) {
             blk = endBlock;

@@ -6,6 +6,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
@@ -18,6 +19,7 @@ import "../libraries/Random.sol";
 
 contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausable
 {
+    using SafeERC20 for IERC20;
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
     EnumerableSet.AddressSet private _minters;
@@ -54,8 +56,6 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
      */
     bytes4 private constant _INTERFACE_ID_GET_ROYALTIES = 0xbb3bafd6;
     bytes4 private constant _INTERFACE_ID_ROYALTIES = 0xb282e1fc;
-
-    int256 constant PERCENT_POINT = 10000;
 
     uint256 private _tokenId = 1000;
 
@@ -153,8 +153,10 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
         emit RoyaltiesUpdated(0, old, sumRoyalties(0));
     }
 
-    function getDefultRoyalty() public view returns(LibPart.Part memory) {
-        return _royalties[0][0];
+    function getDefultRoyalty() public view returns(LibPart.Part memory part) {
+        if(_royalties[0].length > 0) {
+            part = _royalties[0][0];
+        }
     }
 
     function getRoyalties(uint256 tokenId) public view override returns (LibPart.Part[] memory) {
@@ -273,13 +275,13 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
         require(nft.level == materialNft.level, "The level must be the same");
         require(nft.level < maxLevel, "Has reached the max level");
 
-        _burn(nftId);
-        _burn(materialNftId);
+        burn(nftId);
+        burn(materialNftId);
 
         uint256 newLevel = nft.level + 1;
         uint256 fee = getUpgradeFee(newLevel);
         if (fee > 0) {
-            _token.transferFrom(_msgSender(), _feeWallet, fee);
+            _token.safeTransferFrom(_msgSender(), _feeWallet, fee);
         }
 
         uint256 seed = Random.computerSeed()/23;

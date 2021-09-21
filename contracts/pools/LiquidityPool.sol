@@ -4,16 +4,17 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../token/DSGToken.sol";
 import "../interfaces/ISwapPair.sol";
 import "../interfaces/IDsgNft.sol";
+import "../interfaces/IERC20Metadata.sol";
 
 contract LiquidityPool is Ownable {
     using SafeMath for uint256;
-    using SafeERC20 for ERC20;
+    using SafeERC20 for IERC20;
 
     using EnumerableSet for EnumerableSet.AddressSet;
     EnumerableSet.AddressSet private _pairs;
@@ -117,7 +118,7 @@ contract LiquidityPool is Ownable {
             return 0;
         }
         if (blockNumber > startBlock) {
-            return (blockNumber.sub(startBlock).sub(1)).div(halvingPeriod);
+            return (blockNumber.sub(startBlock)).div(halvingPeriod);
         }
         return 0;
     }
@@ -237,9 +238,9 @@ contract LiquidityPool is Ownable {
     }
 
     function donate(uint256 donateAmount) public {
-        uint256 oldBal = ERC20(rewardToken).balanceOf(address(this));
-        ERC20(rewardToken).safeTransferFrom(msg.sender, address(this), donateAmount);
-        uint256 realAmount = ERC20(rewardToken).balanceOf(address(this)) - oldBal;
+        uint256 oldBal = IERC20(rewardToken).balanceOf(address(this));
+        IERC20(rewardToken).safeTransferFrom(msg.sender, address(this), donateAmount);
+        uint256 realAmount = IERC20(rewardToken).balanceOf(address(this)) - oldBal;
 
         uint256 length = poolInfo.length;
         for (uint256 pid = 0; pid < length; ++pid) {
@@ -267,9 +268,9 @@ contract LiquidityPool is Ownable {
 
         require(pool.totalAmount > 0, "no lp staked");
 
-        uint256 oldBal = ERC20(rewardToken).balanceOf(address(this));
-        ERC20(rewardToken).safeTransferFrom(msg.sender, address(this), donateAmount);
-        uint256 realAmount = ERC20(rewardToken).balanceOf(address(this)) - oldBal;
+        uint256 oldBal = IERC20(rewardToken).balanceOf(address(this));
+        IERC20(rewardToken).safeTransferFrom(msg.sender, address(this), donateAmount);
+        uint256 realAmount = IERC20(rewardToken).balanceOf(address(this)) - oldBal;
 
         pool.accRewardPerShare = pool.accRewardPerShare.add(realAmount.mul(1e12).div(pool.totalAmount));
         pool.accDonateAmount = pool.accDonateAmount.add(realAmount);
@@ -287,7 +288,7 @@ contract LiquidityPool is Ownable {
         require(level > 0, "no level");
 
         if(nftSlotFee > 0) {
-            rewardToken.transferFrom(msg.sender, feeWallet, nftSlotFee);
+            IERC20(rewardToken).safeTransferFrom(msg.sender, feeWallet, nftSlotFee);
         }
 
         IDsgNft(pool.additionalNft).safeTransferFrom(msg.sender, address(this), nftId);
@@ -317,7 +318,7 @@ contract LiquidityPool is Ownable {
         user.rewardPending = user.rewardPending.add(pending);
 
         if (_amount > 0) {
-            ERC20(pool.lpToken).safeTransferFrom(msg.sender, address(this), _amount);
+            IERC20(pool.lpToken).safeTransferFrom(msg.sender, address(this), _amount);
             user.amount = user.amount.add(_amount);
             pool.totalAmount = pool.totalAmount.add(_amount);
             if(user.additionalRate > 0) {
@@ -386,7 +387,7 @@ contract LiquidityPool is Ownable {
         if (_amount > 0) {
             user.amount = user.amount.sub(_amount);
             pool.totalAmount = pool.totalAmount.sub(_amount);
-            ERC20(pool.lpToken).safeTransfer(msg.sender, _amount);
+            IERC20(pool.lpToken).safeTransfer(msg.sender, _amount);
             
             pool.totalAmount = pool.totalAmount.sub(user.additionalAmount);
             user.additionalAmount = 0;
@@ -409,7 +410,7 @@ contract LiquidityPool is Ownable {
         uint256 amount = user.amount;
         user.amount = 0;
         user.rewardDebt = 0;
-        ERC20(pool.lpToken).safeTransfer(msg.sender, amount);
+        IERC20(pool.lpToken).safeTransfer(msg.sender, amount);
         pool.totalAmount = pool.totalAmount.sub(amount);
         emit EmergencyWithdraw(msg.sender, _pid, amount);
     }
@@ -418,9 +419,9 @@ contract LiquidityPool is Ownable {
     function safeRewardTokenTransfer(address _to, uint256 _amount) internal {
         uint256 rewardTokenBalance = rewardToken.balanceOf(address(this));
         if (_amount > rewardTokenBalance) {
-            rewardToken.transfer(_to, rewardTokenBalance);
+            IERC20(address(rewardToken)).safeTransfer(_to, rewardTokenBalance);
         } else {
-            rewardToken.transfer(_to, _amount);
+            IERC20(address(rewardToken)).safeTransfer(_to, _amount);
         }
     }
 
@@ -455,14 +456,14 @@ contract LiquidityPool is Ownable {
         require(pid < poolInfo.length, "LiquidityPool: pid out of range");
         PoolInfo memory pool = poolInfo[pid];
         address lpToken = pool.lpToken;
-        ERC20 token0 = ERC20(ISwapPair(lpToken).token0());
-        ERC20 token1 = ERC20(ISwapPair(lpToken).token1());
-        string memory symbol0 = token0.symbol();
-        string memory name0 = token0.name();
-        uint8 decimals0 = token0.decimals();
-        string memory symbol1 = token1.symbol();
-        string memory name1 = token1.name();
-        uint8 decimals1 = token1.decimals();
+        IERC20 token0 = IERC20(ISwapPair(lpToken).token0());
+        IERC20 token1 = IERC20(ISwapPair(lpToken).token1());
+        string memory symbol0 = IERC20Metadata(address(token0)).symbol();
+        string memory name0 = IERC20Metadata(address(token0)).name();
+        uint8 decimals0 = IERC20Metadata(address(token0)).decimals();
+        string memory symbol1 = IERC20Metadata(address(token1)).symbol();
+        string memory name1 = IERC20Metadata(address(token1)).name();
+        uint8 decimals1 = IERC20Metadata(address(token1)).decimals();
         uint256 rewardsPerBlock = pool.allocPoint.mul(rewardTokenPerBlock).div(totalAllocPoint);
         return
             PoolView({

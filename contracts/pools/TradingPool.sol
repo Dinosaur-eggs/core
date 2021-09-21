@@ -124,7 +124,7 @@ contract TradingPool is Ownable {
             return 0;
         }
         if (blockNumber > startBlock) {
-            return (blockNumber.sub(startBlock).sub(1)).div(halvingPeriod);
+            return (blockNumber.sub(startBlock)).div(halvingPeriod);
         }
         return 0;
     }
@@ -186,6 +186,8 @@ contract TradingPool is Ownable {
         uint256 _allocPoint,
         bool _withUpdate
     ) public onlyOwner {
+        require(_pid < poolInfo.length, "overflow");
+
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -220,14 +222,13 @@ contract TradingPool is Ownable {
         }
 
         uint256 tokenReward = blockReward.mul(pool.allocPoint).div(totalAllocPoint);
-
-        bool minRet = rewardToken.mint(address(this), tokenReward);
-        if (minRet) {
-            pool.accRewardPerShare = pool.accRewardPerShare.add(tokenReward.mul(1e12).div(pool.quantity));
-            pool.allocRewardAmount = pool.allocRewardAmount.add(tokenReward);
-            pool.accRewardAmount = pool.accRewardAmount.add(tokenReward);
-        }
         pool.lastRewardBlock = block.number;
+
+        pool.accRewardPerShare = pool.accRewardPerShare.add(tokenReward.mul(1e12).div(pool.quantity));
+        pool.allocRewardAmount = pool.allocRewardAmount.add(tokenReward);
+        pool.accRewardAmount = pool.accRewardAmount.add(tokenReward);
+
+        require(rewardToken.mint(address(this), tokenReward), "mint error");
     }
 
     function swap(
@@ -331,14 +332,17 @@ contract TradingPool is Ownable {
     function emergencyWithdraw(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        safeRewardTokenTransfer(msg.sender, user.pendingReward);
 
+        uint256 pendingReward = user.pendingReward;
         pool.quantity = pool.quantity.sub(user.quantity);
         pool.allocRewardAmount = pool.allocRewardAmount.sub(user.pendingReward);
         user.accRewardAmount = user.accRewardAmount.add(user.pendingReward);
         user.quantity = 0;
         user.rewardDebt = 0;
         user.pendingReward = 0;
+
+        safeRewardTokenTransfer(msg.sender, pendingReward);
+
         emit EmergencyWithdraw(msg.sender, _pid, user.quantity);
     }
 
@@ -346,9 +350,9 @@ contract TradingPool is Ownable {
     function safeRewardTokenTransfer(address _to, uint256 _amount) internal {
         uint256 rewardTokenBalance = rewardToken.balanceOf(address(this));
         if (_amount > rewardTokenBalance) {
-            rewardToken.transfer(_to, rewardTokenBalance);
+            IERC20(rewardToken).safeTransfer(_to, rewardTokenBalance);
         } else {
-            rewardToken.transfer(_to, _amount);
+            IERC20(rewardToken).safeTransfer(_to, _amount);
         }
     }
 
