@@ -135,7 +135,7 @@ contract NFTMarket is Context, IERC721Receiver, ReentrancyGuard, InitializableOw
     }
 
     modifier mustNotSellingOut(uint index) {
-        require(index <= _salesObjects.length, "overflow");
+        require(index < _salesObjects.length, "overflow");
         SalesObject storage obj = _salesObjects[index];
         require(obj.buyer == address(0) && obj.status == 0, "sry, selling out");
         _;
