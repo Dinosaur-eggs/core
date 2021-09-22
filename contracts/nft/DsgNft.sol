@@ -192,6 +192,7 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
 
     function updateRoyalty(uint256 tokenId, uint index, LibPart.Part memory newPart) public {
         require(_nfts[tokenId].author == msg.sender, "not the author");
+        require(index < _royalties[tokenId].length, "bad index");
 
         uint256 old = sumRoyalties(tokenId);
 

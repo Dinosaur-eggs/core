@@ -142,7 +142,7 @@ contract NFTMarket is Context, IERC721Receiver, ReentrancyGuard, InitializableOw
     }
 
     modifier onlySalesOwner(uint index) {
-        require(index <= _salesObjects.length, "overflow");
+        require(index < _salesObjects.length, "overflow");
         SalesObject storage obj = _salesObjects[index];
         require(obj.seller == msg.sender || msg.sender == owner(), "author & owner");
         _;

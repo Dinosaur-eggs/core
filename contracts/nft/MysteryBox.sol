@@ -181,9 +181,9 @@ contract MysteryBox is ERC721, InitializableOwner {
         require(address(box.nft) != address(0), "box not found");
 
         if(box.limit > 0) {
-            require(box.limit - box.minted >= amount, "Over the limit");
+            require(box.limit.sub(box.minted) >= amount, "Over the limit");
         }
-        box.minted = box.minted + amount;
+        box.minted = box.minted.add(amount);
 
         uint256 price = box.price.mul(amount);
         require(IFragmentToken(box.currency).transferFrom(msg.sender, address(this), price), "transfer error");
@@ -281,9 +281,9 @@ contract MysteryBox is ERC721, InitializableOwner {
             }
         }
 
-        uint256 num = uint256(numEnd - numBegin);
+        uint256 num = uint256(numEnd.sub(numBegin));
         
-        num = seed / 3211 % (num+1) + uint256(numBegin);
+        num = (seed / 3211 % (num+1)).add(uint256(numBegin));
         resName = string(abi.encodePacked(prefix, num.toString()));
     }
 
