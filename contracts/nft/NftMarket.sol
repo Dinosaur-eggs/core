@@ -327,9 +327,10 @@ contract NFTMarket is Context, IERC721Receiver, ReentrancyGuard, InitializableOw
     {
         SalesObject storage obj = _salesObjects[index];
         require(obj.status == 0, "bad status");
+        
+        uint256 price = this.getSalesPrice(index);
         obj.status = 1;
 
-        uint256 price = this.getSalesPrice(index);
         uint256 tipsFee = price.mul(_tipsFeeRate).div(_baseRate);
         uint256 purchase = price.sub(tipsFee);
 
