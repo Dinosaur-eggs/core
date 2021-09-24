@@ -22,6 +22,11 @@ const HDWalletProvider = require('@truffle/hdwallet-provider');
 // const infuraKey = process.env.infuraId;
 
 var privKey = process.env.privKey;
+var etherscanApiKey = process.env.etherscanApiKey;
+var bscscanApiKey = process.env.bscscanApiKey;
+var hecoinfoApiKey = process.env.hecoinfoApiKey;
+var ftmscanApiKey = process.env.ftmscanApiKey;
+var polygonscanApiKey = process.env.polygonscanApiKey;
 
 //
 // const fs = require('fs');
@@ -54,7 +59,7 @@ module.exports = {
     },
     bsctest: {
       provider: function () {
-        return new HDWalletProvider(privKey, "https://data-seed-prebsc-1-s3.binance.org:8545/");
+        return new HDWalletProvider(privKey, "https://data-seed-prebsc-2-s2.binance.org:8545/");
       },
       network_id: 97,
       confirmations: 0,
@@ -74,7 +79,15 @@ module.exports = {
     },
   },
 
-  plugins: ["solidity-coverage"],
+  plugins: ["solidity-coverage", "truffle-plugin-verify"],
+
+  api_keys: {
+    etherscan: etherscanApiKey,
+    bscscan: bscscanApiKey,
+    hecoinfo: hecoinfoApiKey,
+    ftmscan: ftmscanApiKey,
+    polygonscan: polygonscanApiKey,
+  },
 
   // Set default mocha options here, use special reporters etc.
   mocha: {
