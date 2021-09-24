@@ -40,11 +40,11 @@ contract Treasury is InitializableOwner {
 
     uint256 constant BASE_RATIO = 1000;
 
-    uint256 public lpBonusRatio = 333;
-    uint256 public nftBonusRatio = 100;
-    uint256 public dsgLpBonusRatio = 133;
-    uint256 public vDsgBonusRatio = 166;
-    uint256 public teamRatio = 134;
+    uint256 public constant lpBonusRatio = 333;
+    uint256 public constant nftBonusRatio = 133;
+    uint256 public constant dsgLpBonusRatio = 84;
+    uint256 public constant vDsgBonusRatio = 84;
+    uint256 public constant teamRatio = 200;
 
     uint256 public totalFee;
 
@@ -106,16 +106,6 @@ contract Treasury is InitializableOwner {
         lpBonus = _lpPool;
         nftBonus = _nftPool;
         team = _teamAddress;
-    }
-
-    function setNftBonusRatio(uint256 _ratio) public onlyOwner {
-        require(_ratio > 0 && _ratio < BASE_RATIO, "Treasury: ratio is out of range");
-        nftBonusRatio = _ratio;
-    }
-
-    function setTeamRatio(uint256 _ratio) public onlyOwner {
-        require(_ratio > 0 && _ratio < BASE_RATIO, "Treasury: ratio is out of range");
-        teamRatio = _ratio;
     }
 
     function setEmergencyAddress(address _newAddress) public onlyOwner {

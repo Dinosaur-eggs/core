@@ -17,8 +17,8 @@ contract DSGToken is DelegateERC20, Ownable {
     address public teamWallet;
     address public feeWallet;
 
-    uint256 public vTokenFeeRate = 3;
-    uint256 public burnRate = 2;
+    uint256 public vTokenFeeRate = 2;
+    uint256 public burnRate = 3;
 
     mapping(address => bool) _whiteList;
 
