@@ -149,6 +149,15 @@ contract Treasury is InitializableOwner {
         if(liquidity == 0) {
             return (0, 0);
         }
+
+        (uint112 _reserve0, uint112 _reserve1, ) = ISwapPair(pair).getReserves();
+        uint256 totalSupply = ISwapPair(pair).totalSupply();
+        amount0 = liquidity.mul(_reserve0) / totalSupply;
+        amount1 = liquidity.mul(_reserve1) / totalSupply;
+        if (amount0 == 0 || amount1 == 0) {
+            return (0, 0);
+        }
+
         ISwapPair(pair).transfer(pair, liquidity);
         (amount0, amount1) = ISwapPair(pair).burn(address(this));
 
