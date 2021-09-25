@@ -90,7 +90,7 @@ contract NFTMarket is Context, IERC721Receiver, ReentrancyGuard, InitializableOw
     mapping(address => bool) public _supportNft;
     bool public _isStartUserSales;
 
-    uint256 public _tipsFeeRate = 50;
+    uint256 public _tipsFeeRate = 20;
     uint256 public _baseRate = 1000;
     address payable _tipsFeeWallet;
     mapping(address => bool) private _disabledRoyalties;
