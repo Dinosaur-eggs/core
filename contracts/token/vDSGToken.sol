@@ -334,7 +334,7 @@ contract vDSGToken is Ownable {
 
         uint256 x =
         DecimalMath.divCeil(
-            IERC20(_dsgToken).totalSupply() * 100,
+            totalSupply() * 100,
             dsgCirculationAmount
         );
 
