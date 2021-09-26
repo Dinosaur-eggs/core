@@ -276,8 +276,6 @@ contract MysteryBox is ERC721, InitializableOwner {
                 numBegin = res.numBegin;
                 numEnd = res.numEnd;
                 nftName = res.name;
-            } else {
-                prefix = string(abi.encodePacked(prefix, level.toString(), "-"));
             }
         }
 
