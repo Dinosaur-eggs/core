@@ -307,7 +307,7 @@ contract Treasury is InitializableOwner {
 
     function sendToDSGLpPool(uint256 _amountUSD, uint256 pid) public onlyCaller {
         require(_amountUSD <= dsgLpBonusAmount, "Treasury: amount exceeds dsg lp bonus amount");
-        dsgLpBonusAmount = dsgLpBonusAmount.sub(dsgLpBonusAmount);
+        dsgLpBonusAmount = dsgLpBonusAmount.sub(_amountUSD);
 
         uint256 _amount = swapUSDToDSG(_amountUSD);
         IERC20(DSG).approve(lpBonus, _amount);
