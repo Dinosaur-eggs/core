@@ -240,7 +240,7 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
         tokenId = _doMint(to, nftName, level, power, res, author);
     }
 
-    function burn(uint256 tokenId) public override nonReentrant {
+    function burn(uint256 tokenId) public override {
         address owner = ERC721.ownerOf(tokenId);
         require(_msgSender() == owner, "caller is not the token owner");
 
