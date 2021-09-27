@@ -356,7 +356,7 @@ contract Treasury is InitializableOwner {
             sendToNftPool(nftBonusAmount, _nftRewardsBlocks);
         }
 
-        if(pids.length > 0) {
+        if(pids.length > 0 && dsgLpBonusAmount > 0) {
             uint256 amount = dsgLpBonusAmount.div(pids.length);
             for (uint i = 0; i < pids.length; i++) {
                 sendToDSGLpPool(amount, pids[i]);
