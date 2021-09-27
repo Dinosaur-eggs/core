@@ -254,6 +254,7 @@ contract LiquidityPool is Ownable {
 
             uint256 tokenReward = realAmount.mul(pool.allocPoint).div(totalAllocPoint);
             pool.accRewardPerShare = pool.accRewardPerShare.add(tokenReward.mul(1e12).div(pool.totalAmount));
+            pool.allocRewardAmount = pool.allocRewardAmount.add(tokenReward);
             pool.accDonateAmount = pool.accDonateAmount.add(tokenReward);
         }
 
@@ -273,6 +274,7 @@ contract LiquidityPool is Ownable {
         uint256 realAmount = IERC20(rewardToken).balanceOf(address(this)) - oldBal;
 
         pool.accRewardPerShare = pool.accRewardPerShare.add(realAmount.mul(1e12).div(pool.totalAmount));
+        pool.allocRewardAmount = pool.allocRewardAmount.add(realAmount);
         pool.accDonateAmount = pool.accDonateAmount.add(realAmount);
 
         emit Donate(msg.sender, pid, donateAmount, realAmount);
