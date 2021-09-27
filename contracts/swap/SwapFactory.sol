@@ -11,7 +11,7 @@ contract SwapFactory is ISwapFactory {
 
     address public override feeTo;
     address public override feeToSetter;
-    uint256 public override feeToRate = 30;
+    uint256 public override feeToRate = 0;
 
     mapping(address => mapping(address => address)) public override getPair;
     address[] public override allPairs;
