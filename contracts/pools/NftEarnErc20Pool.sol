@@ -120,14 +120,14 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
         updatePool();
 
         uint256 oldBal = rewardToken.balanceOf(address(this));
-        uint256 remainingBal = oldBal - allocRewardAmount;
+        uint256 remainingBal = oldBal.sub(allocRewardAmount);
         if(remainingBal > 0 && rewardTokenPerBlock > 0) {
             uint256 remainingBlocks = remainingBal.div(rewardTokenPerBlock);
             rewardsBlocks = rewardsBlocks.add(remainingBlocks);
         }
 
         rewardToken.safeTransferFrom(msg.sender, address(this), amount);
-        rewardTokenPerBlock = rewardToken.balanceOf(address(this)).div(rewardsBlocks);
+        rewardTokenPerBlock = rewardToken.balanceOf(address(this)).sub(allocRewardAmount).div(rewardsBlocks);
         if(block.number >= startBlock) {
             endBlock = block.number.add(rewardsBlocks);
         } else {

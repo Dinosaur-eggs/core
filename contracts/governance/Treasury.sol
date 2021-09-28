@@ -30,6 +30,7 @@ contract Treasury is InitializableOwner {
     address public factory;
     address public router;
     address public USDT;
+    address public VAI;
     address public WETH;
     address public DSG;
     address public team;
@@ -88,6 +89,7 @@ contract Treasury is InitializableOwner {
         address _factory,
         address _router,
         address _usdt,
+        address _vai,
         address _weth,
         address _dsg,
         address _vdsgTreasury,
@@ -100,6 +102,7 @@ contract Treasury is InitializableOwner {
         factory = _factory;
         router = _router;
         USDT = _usdt;
+        VAI = _vai;
         WETH = _weth;
         DSG = _dsg;
         vDsgTreasury = _vdsgTreasury;
@@ -371,7 +374,11 @@ contract Treasury is InitializableOwner {
 
     function swapUSDToDSG(uint256 _amountUSD) internal returns(uint256 amountOut) {
         uint256 balOld = IERC20(DSG).balanceOf(address(this));
-        _swap(USDT, DSG, _amountUSD, address(this));
+        
+        _swap(USDT, VAI, _amountUSD, address(this));
+        uint256 amountVAI = IERC20(VAI).balanceOf(address(this));
+        _swap(VAI, DSG, amountVAI, address(this));
+
         amountOut = IERC20(DSG).balanceOf(address(this)).sub(balOld);
     }
 
