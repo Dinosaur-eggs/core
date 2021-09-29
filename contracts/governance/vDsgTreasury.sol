@@ -85,12 +85,12 @@ contract vDsgTreasury is Ownable {
     }
 
     function addCaller(address _newCaller) public onlyOwner returns (bool) {
-        require(_newCaller != address(0), "Treasury: address is zero");
+        require(_newCaller != address(0), "vDsgTreasury: address is zero");
         return EnumerableSet.add(_callers, _newCaller);
     }
 
     function delCaller(address _delCaller) public onlyOwner returns (bool) {
-        require(_delCaller != address(0), "Treasury: address is zero");
+        require(_delCaller != address(0), "vDsgTreasury: address is zero");
         return EnumerableSet.remove(_callers, _delCaller);
     }
 
@@ -103,12 +103,12 @@ contract vDsgTreasury is Ownable {
     }
 
     function getCaller(uint256 _index) public view returns (address) {
-        require(_index <= getCallerLength() - 1, "Treasury: index out of bounds");
+        require(_index <= getCallerLength() - 1, "vDsgTreasury: index out of bounds");
         return EnumerableSet.at(_callers, _index);
     }
 
     modifier onlyCaller() {
-        require(isCaller(msg.sender), "Treasury: not the caller");
+        require(isCaller(msg.sender), "vDsgTreasury: not the caller");
         _;
     }
 }
