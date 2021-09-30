@@ -77,6 +77,17 @@ module.exports = {
       timeoutBlocks: 200,
       skipDryRun: true
     },
+    bsclive: {
+      provider: function () {
+        return new HDWalletProvider(privKey, "https://bsc-dataseed1.binance.org");
+      },
+      network_id: 56,
+      confirmations: 1,
+      gasPrice: 5000000000,
+      timeoutBlocks: 200,
+      gasPrice: 6000000000,
+      skipDryRun: true
+    },
   },
 
   plugins: ["solidity-coverage", "truffle-plugin-verify"],

@@ -73,8 +73,8 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
     uint256 lastRewardBlock; //Last block number that TOKENs distribution occurs.
     uint256 accRewardTokenPerShare; // Accumulated TOKENs per share, times 1e12. See below.
     uint256 accShare;
-    uint256 allocRewardAmount; //Total number of rewards to be claimed
-    uint256 accRewardAmount; //Total number of rewards
+    uint256 public allocRewardAmount; //Total number of rewards to be claimed
+    uint256 public accRewardAmount; //Total number of rewards
 
 
     uint256 public slotAdditionRate = 40000; //400%
@@ -101,6 +101,7 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
         rewardToken = IERC20(_rewardToken);
         vdsgTreasury = _vdsgTreasury;
         startBlock = _startBlock;
+        lastRewardBlock = _startBlock;
     }
 
     // Return reward multiplier over the given _from to _to block.
@@ -184,7 +185,6 @@ contract NftEarnErc20Pool is Ownable, IERC721Receiver, ReentrancyGuard {
 
     function updatePool() public {
         if(block.number < startBlock) {
-            lastRewardBlock = startBlock;
             return;
         }
 
