@@ -51,7 +51,7 @@ contract vDSGToken is Ownable {
     uint256 public _totalStakingPower;
     mapping(address => UserInfo) public userInfo;
     
-    uint256 public _superiorMinDSG; //The superior must obtain the min DSG that should be pledged for invitation rewards
+    uint256 public _superiorMinDSG = 1000e18; //The superior must obtain the min DSG that should be pledged for invitation rewards
 
     struct UserInfo {
         uint128 stakingPower;
