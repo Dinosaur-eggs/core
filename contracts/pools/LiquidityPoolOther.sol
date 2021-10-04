@@ -7,11 +7,12 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "../token/DSGToken.sol";
 import "../interfaces/ISwapPair.sol";
-import  "../interfaces/IDsgNft.sol";
+import "../interfaces/IDsgNft.sol";
 import "../interfaces/IERC20Metadata.sol";
 
-contract LiquidityPoolOther is Ownable {
+contract LiquidityPool is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -73,9 +74,12 @@ contract LiquidityPoolOther is Ownable {
     }
 
     // The reward token!
-    IERC20 public rewardToken;
+    DSGToken public rewardToken;
     // reward tokens created per block.
     uint256 public rewardTokenPerBlock;
+
+    address public feeWallet;
+
     // Info of each pool.
     PoolInfo[] public poolInfo;
     // Info of each user that stakes LP tokens.
@@ -88,10 +92,8 @@ contract LiquidityPoolOther is Ownable {
     uint256 public startBlock;
     uint256 public halvingPeriod = 3952800; // half year
 
-    uint256 public ratePerNftPower = 10; //The share ratio that nft can increase per point of power
+    uint256[] public additionalRate = [0, 300, 400, 500, 600, 800, 1000]; //The share ratio that can be increased by each level of nft
     uint256 public nftSlotFee = 10e18; //Additional nft requires a card slot, enable the card slot requires fee
-    uint256 public maxNftAdditionalRate = 10000; //nft maximum increaseable share ratio
-    address public nftSlotFeeAddress;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -100,15 +102,15 @@ contract LiquidityPoolOther is Ownable {
     event AdditionalNft(address indexed user, uint256 pid, uint256 nftId);
 
     constructor(
-        IERC20 _rewardToken,
+        DSGToken _rewardToken,
         uint256 _rewardPerBlock,
         uint256 _startBlock,
-        address _nftSlotFeeAddress
+        address _feeWallet
     ) public {
         rewardToken = _rewardToken;
         rewardTokenPerBlock = _rewardPerBlock;
         startBlock = _startBlock;
-        nftSlotFeeAddress = _nftSlotFeeAddress;
+        feeWallet = _feeWallet;
     }
 
     function phase(uint256 blockNumber) public view returns (uint256) {
@@ -116,7 +118,7 @@ contract LiquidityPoolOther is Ownable {
             return 0;
         }
         if (blockNumber > startBlock) {
-            return (blockNumber.sub(startBlock).sub(1)).div(halvingPeriod);
+            return (blockNumber.sub(startBlock)).div(halvingPeriod);
         }
         return 0;
     }
@@ -138,12 +140,6 @@ contract LiquidityPoolOther is Ownable {
         }
         blockReward = blockReward.add((block.number.sub(_lastRewardBlock)).mul(getRewardTokenPerBlock(block.number)));
         return blockReward;
-    }
-
-    function setNftSlotFeeAddress(address newAddress) public onlyOwner {
-        require(newAddress != address(0), "newAddress address is the zero address");
-
-        nftSlotFeeAddress = newAddress;
     }
 
     // Add a new lp to the pool. Can only be called by the owner.
@@ -181,19 +177,14 @@ contract LiquidityPoolOther is Ownable {
         LpOfPid[_lpToken] = getPoolLength() - 1;
     }
 
-    function setRatePerNftPower(uint256 v) public onlyOwner {
-        require(v <= 1000, "v must < 1000");
-        ratePerNftPower = v;
-    }
-
-    function setMaxNftAdditionalRate(uint256 rate) public onlyOwner {
-        maxNftAdditionalRate = rate;
-    }
-
     function setAdditionalNft(uint256 _pid, address _additionalNft) public onlyOwner {
         require(poolInfo[_pid].additionalNft == address(0), "already set");
 
         poolInfo[_pid].additionalNft = _additionalNft;
+    }
+
+    function getAdditionalRates() public view returns(uint256[] memory) {
+        return additionalRate;
     }
 
     // Update the given pool's reward token allocation point. Can only be called by the owner.
@@ -260,6 +251,7 @@ contract LiquidityPoolOther is Ownable {
 
             uint256 tokenReward = realAmount.mul(pool.allocPoint).div(totalAllocPoint);
             pool.accRewardPerShare = pool.accRewardPerShare.add(tokenReward.mul(1e12).div(pool.totalAmount));
+            pool.allocRewardAmount = pool.allocRewardAmount.add(tokenReward);
             pool.accDonateAmount = pool.accDonateAmount.add(tokenReward);
         }
 
@@ -279,6 +271,7 @@ contract LiquidityPoolOther is Ownable {
         uint256 realAmount = IERC20(rewardToken).balanceOf(address(this)) - oldBal;
 
         pool.accRewardPerShare = pool.accRewardPerShare.add(realAmount.mul(1e12).div(pool.totalAmount));
+        pool.allocRewardAmount = pool.allocRewardAmount.add(realAmount);
         pool.accDonateAmount = pool.accDonateAmount.add(realAmount);
 
         emit Donate(msg.sender, pid, donateAmount, realAmount);
@@ -290,11 +283,11 @@ contract LiquidityPoolOther is Ownable {
         require(user.additionalNftId == 0, "nft already set");
         updatePool(_pid);
 
-        uint256 power = IDsgNft(pool.additionalNft).getPower(nftId);
-        require(power > 0, "no power");
+        uint256 level = IDsgNft(pool.additionalNft).getLevel(nftId);
+        require(level > 0, "no level");
 
         if(nftSlotFee > 0) {
-            rewardToken.safeTransferFrom(msg.sender, nftSlotFeeAddress, nftSlotFee);
+            IERC20(rewardToken).safeTransferFrom(msg.sender, feeWallet, nftSlotFee);
         }
 
         IDsgNft(pool.additionalNft).safeTransferFrom(msg.sender, address(this), nftId);
@@ -306,10 +299,8 @@ contract LiquidityPoolOther is Ownable {
         }
 
         user.additionalNftId = nftId;
-        user.additionalRate = power.mul(ratePerNftPower);
-        if(user.additionalRate > maxNftAdditionalRate) {
-            user.additionalRate = maxNftAdditionalRate;
-        }
+        user.additionalRate = additionalRate[level];
+        
         user.additionalAmount = user.amount.mul(user.additionalRate).div(10000);
         pool.totalAmount = pool.totalAmount.add(user.additionalAmount);
 
@@ -354,11 +345,11 @@ contract LiquidityPoolOther is Ownable {
             pool.allocRewardAmount = pool.allocRewardAmount.sub(pendingAmount);
         }
 
-        pool.totalAmount = pool.totalAmount.sub(user.additionalAmount);
-        user.additionalAmount = 0;
-        user.additionalRate = 0;
-        user.additionalNftId = 0;
-        user.rewardDebt = user.amount.mul(pool.accRewardPerShare).div(1e12);
+        // pool.totalAmount = pool.totalAmount.sub(user.additionalAmount);
+        // user.additionalAmount = 0;
+        // user.additionalRate = 0;
+        // user.additionalNftId = 0;
+        user.rewardDebt = user.amount.add(user.additionalAmount).mul(pool.accRewardPerShare).div(1e12);
     }
 
     function pendingRewards(uint256 _pid, address _user) public view returns (uint256) {
@@ -369,14 +360,15 @@ contract LiquidityPoolOther is Ownable {
         uint256 accRewardPerShare = pool.accRewardPerShare;
 
         uint256 pending = 0;
-        if (user.amount > 0) {
+        uint256 amount = user.amount.add(user.additionalAmount);
+        if (amount > 0) {
             if (block.number > pool.lastRewardBlock) {
                 uint256 blockReward = getRewardTokenBlockReward(pool.lastRewardBlock);
                 uint256 tokenReward = blockReward.mul(pool.allocPoint).div(totalAllocPoint);
                 accRewardPerShare = accRewardPerShare.add(tokenReward.mul(1e12).div(pool.totalAmount));
-                pending = user.amount.mul(accRewardPerShare).div(1e12).sub(user.rewardDebt);
+                pending = amount.mul(accRewardPerShare).div(1e12).sub(user.rewardDebt);
             } else if (block.number == pool.lastRewardBlock) {
-                pending = user.amount.mul(accRewardPerShare).div(1e12).sub(user.rewardDebt);
+                pending = amount.mul(accRewardPerShare).div(1e12).sub(user.rewardDebt);
             }
         }
         pending = pending.add(user.rewardPending);
@@ -395,6 +387,11 @@ contract LiquidityPoolOther is Ownable {
             user.amount = user.amount.sub(_amount);
             pool.totalAmount = pool.totalAmount.sub(_amount);
             IERC20(pool.lpToken).safeTransfer(msg.sender, _amount);
+            
+            pool.totalAmount = pool.totalAmount.sub(user.additionalAmount);
+            user.additionalAmount = 0;
+            user.additionalRate = 0;
+            user.additionalNftId = 0;
         }
         user.rewardDebt = user.amount.add(user.additionalAmount).mul(pool.accRewardPerShare).div(1e12);
         emit Withdraw(msg.sender, _pid, _amount);
@@ -421,9 +418,9 @@ contract LiquidityPoolOther is Ownable {
     function safeRewardTokenTransfer(address _to, uint256 _amount) internal {
         uint256 rewardTokenBalance = rewardToken.balanceOf(address(this));
         if (_amount > rewardTokenBalance) {
-            rewardToken.transfer(_to, rewardTokenBalance);
+            IERC20(address(rewardToken)).safeTransfer(_to, rewardTokenBalance);
         } else {
-            rewardToken.transfer(_to, _amount);
+            IERC20(address(rewardToken)).safeTransfer(_to, _amount);
         }
     }
 
@@ -507,7 +504,7 @@ contract LiquidityPoolOther is Ownable {
         uint256 pid = LpOfPid[lpToken];
         UserInfo memory user = userInfo[pid][account];
         uint256 unclaimedRewards = pendingRewards(pid, account);
-        uint256 lpBalance = IERC20(lpToken).balanceOf(account);
+        uint256 lpBalance = ERC20(lpToken).balanceOf(account);
         return
             UserView({
                 stakedAmount: user.amount,
@@ -527,5 +524,9 @@ contract LiquidityPoolOther is Ownable {
             views[i] = getUserView(lpToken, account);
         }
         return views;
+    }
+
+    function onERC721Received(address, address, uint256, bytes memory) public returns (bytes4) {
+        return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
     }
 }
