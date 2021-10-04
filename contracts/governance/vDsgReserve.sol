@@ -4,8 +4,6 @@ pragma solidity =0.6.12;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "../governance/InitializableOwner.sol";
 
 interface IvDsg {
@@ -15,8 +13,6 @@ interface IvDsg {
 }
 
 contract vDsgReserve is InitializableOwner {
-    using SafeMath for uint256;
-    using SafeERC20 for IERC20;
 
     event Donte(uint256 amount);
 
@@ -36,6 +32,8 @@ contract vDsgReserve is InitializableOwner {
     function donateToVDsg(uint256 amount) public onlyOwner {
         dsg.approve(address(vdsg), uint(-1));
         vdsg.donate(amount);
+
+        emit Donte(amount);
     }
 
     function donateAllToVDsg() public onlyOwner {
