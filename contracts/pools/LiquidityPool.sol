@@ -93,7 +93,7 @@ contract LiquidityPool is Ownable {
     uint256 public halvingPeriod = 3952800; // half year
 
     uint256[] public additionalRate = [0, 300, 400, 500, 600, 800, 1000]; //The share ratio that can be increased by each level of nft
-    uint256 public nftSlotFee = 10e18; //Additional nft requires a card slot, enable the card slot requires fee
+    uint256 public nftSlotFee = 1e18; //Additional nft requires a card slot, enable the card slot requires fee
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -181,6 +181,10 @@ contract LiquidityPool is Ownable {
         require(poolInfo[_pid].additionalNft == address(0), "already set");
 
         poolInfo[_pid].additionalNft = _additionalNft;
+    }
+
+    function setNftSlotFee(uint256 val) public onlyOwner {
+        nftSlotFee = val;
     }
 
     function getAdditionalRates() public view returns(uint256[] memory) {
@@ -410,10 +414,23 @@ contract LiquidityPool is Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         uint256 amount = user.amount;
+        uint256 additionalAmount = user.additionalAmount;
         user.amount = 0;
         user.rewardDebt = 0;
+        user.additionalAmount = 0;
+        user.additionalRate = 0;
+        user.additionalNftId = 0;
+
         IERC20(pool.lpToken).safeTransfer(msg.sender, amount);
-        pool.totalAmount = pool.totalAmount.sub(amount);
+
+        if (pool.totalAmount >= amount) {
+            pool.totalAmount = pool.totalAmount.sub(amount);
+        }
+        
+        if(pool.totalAmount >= additionalAmount) {
+            pool.totalAmount = pool.totalAmount.sub(additionalAmount);
+        }
+        
         emit EmergencyWithdraw(msg.sender, _pid, amount);
     }
 
