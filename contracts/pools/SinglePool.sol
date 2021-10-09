@@ -151,8 +151,12 @@ contract SinglePool is Ownable {
         if (user.amount > 0) {
             uint256 pending = user.amount.mul(pool.accRewardsPerShare).div(1e18).sub(user.rewardDebt);
             if(pending > 0) {
-                require (totalDeposit.add(pending) <= rewardToken.balanceOf(address(this)), 'not enough token');
-                rewardToken.safeTransfer(address(msg.sender), pending);
+                uint256 bal = rewardToken.balanceOf(address(this));
+                if(bal >= pending) {
+                    rewardToken.safeTransfer(address(msg.sender), pending);
+                } else {
+                    rewardToken.safeTransfer(address(msg.sender), bal);
+                }
             }
         }
         if(_amount > 0) {
@@ -173,8 +177,12 @@ contract SinglePool is Ownable {
         updatePool(0);
         uint256 pending = user.amount.mul(pool.accRewardsPerShare).div(1e18).sub(user.rewardDebt);
         if(pending > 0) {
-            require (totalDeposit.add(pending) <= rewardToken.balanceOf(address(this)), 'not enough token');
-            rewardToken.safeTransfer(address(msg.sender), pending);
+            uint256 bal = rewardToken.balanceOf(address(this));
+            if(bal >= pending) {
+                rewardToken.safeTransfer(address(msg.sender), pending);
+            } else {
+                rewardToken.safeTransfer(address(msg.sender), bal);
+            }
         }
         if(_amount > 0) {
             user.amount = user.amount.sub(_amount);
