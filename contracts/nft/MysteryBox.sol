@@ -286,7 +286,7 @@ contract MysteryBox is ERC721, InitializableOwner {
     }
 
     function openBox(uint256 boxId) public {
-        require(isContract(msg.sender) == false, "Prohibit contract calls");
+        require(isContract(msg.sender) == false && tx.origin == msg.sender, "Prohibit contract calls");
 
         uint256 factoryId = _boxes[boxId];
         BoxFactory memory factory = _boxFactories[factoryId];
