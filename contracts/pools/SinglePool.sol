@@ -160,9 +160,12 @@ contract SinglePool is Ownable {
             }
         }
         if(_amount > 0) {
+            uint256 oldBal = pool.lpToken.balanceOf(address(this));
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+            _amount = pool.lpToken.balanceOf(address(this)).sub(oldBal);
+
             user.amount = user.amount.add(_amount);
-            totalDeposit=totalDeposit.add(_amount);
+            totalDeposit = totalDeposit.add(_amount);
         }
         user.rewardDebt = user.amount.mul(pool.accRewardsPerShare).div(1e18);
 
@@ -186,7 +189,7 @@ contract SinglePool is Ownable {
         }
         if(_amount > 0) {
             user.amount = user.amount.sub(_amount);
-            totalDeposit=totalDeposit.sub(_amount);
+            totalDeposit = totalDeposit.sub(_amount);
             pool.lpToken.safeTransfer(address(msg.sender), _amount);
         }
         user.rewardDebt = user.amount.mul(pool.accRewardsPerShare).div(1e18);
