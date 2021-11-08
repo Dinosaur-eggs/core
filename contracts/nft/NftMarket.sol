@@ -355,7 +355,8 @@ contract NFTMarket is Context, IERC721Receiver, ReentrancyGuard, InitializableOw
                 if (feeValue != 0) {
                     royaltiesAmount = royaltiesAmount.add(feeValue);
                     if(TransferHelper.isETH(currencyAddr)) {
-                        TransferHelper.safeTransferETH(fees[i].account, feeValue);
+                        IWOKT(WETH).deposit{value: feeValue}();
+                        IWOKT(WETH).transfer(fees[i].account, feeValue);
                     } else {
                         IERC20(currencyAddr).safeTransferFrom(msg.sender, fees[i].account, feeValue);
                     }
