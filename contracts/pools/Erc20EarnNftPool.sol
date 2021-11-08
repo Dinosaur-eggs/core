@@ -224,6 +224,7 @@ contract Erc20EarnNftPool is Ownable, IERC721Receiver {
         require(_sid < user[_pid][msg.sender].length, "staking is not existed");
         require(block.timestamp >= user[_pid][msg.sender][_sid] + pool[_pid].stakeTime, "staking is not due");
         require(pool[_pid].nftTokenIds.length > 0, "no nft left");
+        require(tx.origin == msg.sender, "Cant call from contract");
 
         IERC721 nft = IERC721(pool[_pid].nftAddress);
         uint256 tokenIdIdx = genRandomTokenId(_pid);

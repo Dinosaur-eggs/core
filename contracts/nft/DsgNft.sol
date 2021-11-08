@@ -211,6 +211,22 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
         emit RoyaltiesUpdated(tokenId, old, sumRoyalties(tokenId));
     }
 
+    function addRoyalty(uint256 tokenId, address payable account, uint96 value) public onlyOwner {
+        uint256 old = sumRoyalties(tokenId);
+
+        LibPart.Part memory newPart = LibPart.Part(account, value);
+
+        _royalties[tokenId].push(newPart);
+
+        emit RoyaltiesUpdated(tokenId, old, sumRoyalties(tokenId));
+    }
+
+    function mutiAddRoyalty(uint256[] memory tokenIds, address payable account, uint96 value) public onlyOwner {
+        for (uint i = 0; i < tokenIds.length; ++i) {
+            addRoyalty(tokenIds[i], account, value);
+        }
+    }
+
     function _doMint(
         address to, string memory nftName, uint256 level, uint256 power, string memory res, address author
     ) internal returns(uint256) {
@@ -270,6 +286,8 @@ contract DsgNft is IDsgNft, ERC721, InitializableOwner, ReentrancyGuard, Pausabl
     function upgradeNft(uint256 nftId, uint256 materialNftId) public override nonReentrant whenNotPaused
     {
         require(canUpgrade, "CANT UPGRADE");
+        require(tx.origin == msg.sender, "Cant call from contract");
+
         LibPart.NftInfo memory nft = getNft(nftId);
         LibPart.NftInfo memory materialNft = getNft(materialNftId);
 
