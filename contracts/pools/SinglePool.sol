@@ -148,17 +148,19 @@ contract SinglePool is Ownable {
 
         updatePool(0);
         
+        uint256 reward;
         if (user.amount > 0) {
             uint256 pending = user.amount.mul(pool.accRewardsPerShare).div(1e18).sub(user.rewardDebt);
             if(pending > 0) {
                 uint256 bal = rewardToken.balanceOf(address(this));
                 if(bal >= pending) {
-                    rewardToken.safeTransfer(address(msg.sender), pending);
+                    reward = pending;
                 } else {
-                    rewardToken.safeTransfer(address(msg.sender), bal);
+                    reward = bal;
                 }
             }
         }
+
         if(_amount > 0) {
             uint256 oldBal = pool.lpToken.balanceOf(address(this));
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
@@ -169,6 +171,10 @@ contract SinglePool is Ownable {
         }
         user.rewardDebt = user.amount.mul(pool.accRewardsPerShare).div(1e18);
 
+        if (reward > 0) {
+            rewardToken.safeTransfer(address(msg.sender), reward);
+        }
+        
         emit Deposit(msg.sender, _amount);
     }
 
@@ -177,8 +183,18 @@ contract SinglePool is Ownable {
         PoolInfo storage pool = poolInfo[0];
         UserInfo storage user = userInfo[msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
+
         updatePool(0);
+
         uint256 pending = user.amount.mul(pool.accRewardsPerShare).div(1e18).sub(user.rewardDebt);
+        
+        if(_amount > 0) {
+            user.amount = user.amount.sub(_amount);
+            totalDeposit = totalDeposit.sub(_amount);
+            pool.lpToken.safeTransfer(address(msg.sender), _amount);
+        }
+        user.rewardDebt = user.amount.mul(pool.accRewardsPerShare).div(1e18);
+
         if(pending > 0) {
             uint256 bal = rewardToken.balanceOf(address(this));
             if(bal >= pending) {
@@ -187,13 +203,6 @@ contract SinglePool is Ownable {
                 rewardToken.safeTransfer(address(msg.sender), bal);
             }
         }
-        if(_amount > 0) {
-            user.amount = user.amount.sub(_amount);
-            totalDeposit = totalDeposit.sub(_amount);
-            pool.lpToken.safeTransfer(address(msg.sender), _amount);
-        }
-        user.rewardDebt = user.amount.mul(pool.accRewardsPerShare).div(1e18);
-
         emit Withdraw(msg.sender, _amount);
     }
 
