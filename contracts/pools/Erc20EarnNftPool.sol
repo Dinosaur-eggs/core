@@ -87,6 +87,7 @@ contract Erc20EarnNftPool is Ownable, IERC721Receiver {
     function addPool(address _tokenAddress, uint256 _stakeAmount, uint256 _stakeTime, address _nftAddress, bool isLp) external onlyOwner {
         require(_tokenAddress.isContract(), "stake token address should be smart contract address");
         require(_nftAddress.isContract(), "NFT address should be smart contract address");
+        checkPoolDuplicate(_tokenAddress);
 
         uint256[] memory tokenIds;
 
@@ -105,6 +106,13 @@ contract Erc20EarnNftPool is Ownable, IERC721Receiver {
         }));
 
         emit AddPoolEvent(_tokenAddress, _stakeAmount, _stakeTime, _nftAddress);
+    }
+
+    function checkPoolDuplicate(address _lpToken) view internal {
+        uint256 len = pool.length;
+        for (uint256 i = 0; i < len; ++i) {
+            require(pool[i].tokenAddress != _lpToken, "add: _lpToken is already added to the pool");
+        }
     }
 
     function addNftToPool(uint256 _pid, uint256[] memory _tokenIds) external onlyOwner validatePoolByPid(_pid) {
