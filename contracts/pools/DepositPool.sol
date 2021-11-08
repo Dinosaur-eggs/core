@@ -174,7 +174,7 @@ contract DepositPool is Ownable {
             return;
         }
 
-        uint256 tokenSupply = ERC20(pool.token).balanceOf(address(this));
+        uint256 tokenSupply = pool.totalAmount;
         if (tokenSupply == 0) {
             pool.lastRewardBlock = block.number;
             return;
