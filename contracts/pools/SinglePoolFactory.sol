@@ -5,10 +5,12 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./SinglePool.sol";
 import "../interfaces/IERC20Metadata.sol";
 
 contract SinglePoolFactory is Ownable {
+    using SafeERC20 for IERC20;
 
     using EnumerableSet for EnumerableSet.AddressSet;
     EnumerableSet.AddressSet private pools;
@@ -158,7 +160,7 @@ contract SinglePoolFactory is Ownable {
         SinglePool(pool).emergencyRewardWithdraw(_amount);
         uint256 amount = token.balanceOf(address(this)) - oldAmount;
 
-        require(token.transfer(msg.sender, amount));
+        token.safeTransfer(msg.sender, amount);
     }
 
 }

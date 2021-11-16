@@ -97,6 +97,7 @@ contract SinglePool is Ownable {
     }
 
     function updateMultiplier(uint256 multiplierNumber) public onlyOwner {
+        massUpdatePools();
         BONUS_MULTIPLIER = multiplierNumber;
     }
 

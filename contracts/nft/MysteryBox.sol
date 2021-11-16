@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "../governance/InitializableOwner.sol";
 import "../interfaces/IDsgNft.sol";
 import "../interfaces/IFragmentToken.sol";
@@ -13,6 +14,7 @@ import "../libraries/Random.sol";
 
 
 contract MysteryBox is ERC721, InitializableOwner {
+    using SafeERC20 for IFragmentToken;
 
     struct BoxFactory {
         uint256 id;
@@ -66,6 +68,8 @@ contract MysteryBox is ERC721, InitializableOwner {
     mapping(uint256 => uint256) private _boxes; // boxId: BoxFactoryId
     mapping(uint256 => BoxFactory) private _boxFactories; // factoryId: BoxFactory
     mapping(uint256 => mapping(uint256 => ResInfo)) private _res; // factoryId: {level: ResInfo}
+    mapping(uint256 => uint256) private _lastTransferBlock;
+    uint256 _seed;
 
     uint256[] private _levelBasePower = [1000, 2500, 6500, 14500, 35000, 90000];
 
@@ -186,7 +190,7 @@ contract MysteryBox is ERC721, InitializableOwner {
         box.minted = box.minted.add(amount);
 
         uint256 price = box.price.mul(amount);
-        require(IFragmentToken(box.currency).transferFrom(msg.sender, address(this), price), "transfer error");
+        IFragmentToken(box.currency).safeTransferFrom(msg.sender, address(this), price);
         IFragmentToken(box.currency).burn(price);
 
         for(uint i = 0; i < amount; i++) {
@@ -287,12 +291,14 @@ contract MysteryBox is ERC721, InitializableOwner {
 
     function openBox(uint256 boxId) public {
         require(isContract(msg.sender) == false && tx.origin == msg.sender, "Prohibit contract calls");
+        require(block.number - _lastTransferBlock[boxId] > 1, "wait");
+        _upSeed(boxId);
 
         uint256 factoryId = _boxes[boxId];
         BoxFactory memory factory = _boxFactories[factoryId];
         burn(boxId);
 
-        uint256 seed = Random.computerSeed();
+        uint256 seed = Random.computerSeed().div(_seed);
 
         uint256 level = getLevel(seed);
         uint256 power = randomPower(level, seed);
@@ -308,5 +314,27 @@ contract MysteryBox is ERC721, InitializableOwner {
         uint size;
         assembly { size := extcodesize(addr) }
         return size > 0;
+    }
+
+    function _transfer(address from, address to, uint256 tokenId) internal virtual override {
+        _lastTransferBlock[tokenId] = block.number;
+        _upSeed(uint256(keccak256(abi.encodePacked(from, to, tokenId))));
+
+        super._transfer(from, to, tokenId);
+    }
+
+    function _upSeed(uint256 val) internal {
+        _seed =  (_seed +  val / block.timestamp);
+        if (_seed > 50000) {
+            _seed %= 50000;
+        }
+    }
+
+    function upSeed(uint256 val) public onlyOwner {
+        _upSeed(val);
+    }
+    
+    function getSeed() public view onlyOwner returns(uint256) {
+        return _seed;
     }
 }
