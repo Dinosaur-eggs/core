@@ -331,7 +331,7 @@ contract TradingPool is Ownable {
 
     function emergencyWithdraw(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
+        UserInfo storage user = userInfo[_pid][tx.origin];
 
         uint256 pendingReward = user.pendingReward;
         pool.quantity = pool.quantity.sub(user.quantity);
