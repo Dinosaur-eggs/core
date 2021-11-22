@@ -407,10 +407,23 @@ contract LiquidityPool is Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         uint256 amount = user.amount;
+        uint256 additionalAmount = user.additionalAmount;
         user.amount = 0;
         user.rewardDebt = 0;
+        user.additionalAmount = 0;
+        user.additionalRate = 0;
+        user.additionalNftId = 0;
+
         IERC20(pool.lpToken).safeTransfer(msg.sender, amount);
-        pool.totalAmount = pool.totalAmount.sub(amount);
+
+        if (pool.totalAmount >= amount) {
+            pool.totalAmount = pool.totalAmount.sub(amount);
+        }
+        
+        if(pool.totalAmount >= additionalAmount) {
+            pool.totalAmount = pool.totalAmount.sub(additionalAmount);
+        }
+        
         emit EmergencyWithdraw(msg.sender, _pid, amount);
     }
 
