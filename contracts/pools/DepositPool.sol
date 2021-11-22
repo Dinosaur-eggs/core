@@ -241,22 +241,22 @@ contract DepositPool is Ownable {
 
     function withdraw(uint256 _pid, uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][tx.origin];
+        UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "DepositPool: withdraw: not good");
         updatePool(_pid);
         uint256 pendingAmount = user.amount.mul(pool.accRewardPerShare).div(1e12).sub(user.rewardDebt);
         if (pendingAmount > 0) {
-            safeRewardTokenTransfer(tx.origin, pendingAmount);
+            safeRewardTokenTransfer(msg.sender, pendingAmount);
             user.accRewardAmount = user.accRewardAmount.add(pendingAmount);
             pool.allocRewardAmount = pool.allocRewardAmount.sub(pendingAmount);
         }
         if (_amount > 0) {
             user.amount = user.amount.sub(_amount);
             pool.totalAmount = pool.totalAmount.sub(_amount);
-            ERC20(pool.token).safeTransfer(tx.origin, _amount);
+            ERC20(pool.token).safeTransfer(msg.sender, _amount);
         }
         user.rewardDebt = user.amount.mul(pool.accRewardPerShare).div(1e12);
-        emit Withdraw(tx.origin, _pid, _amount);
+        emit Withdraw(msg.sender, _pid, _amount);
     }
 
     function harvestAll() public {
