@@ -350,7 +350,7 @@ contract vDSGToken is Ownable {
 
     function setMintLimitRatio(uint256 min, uint256 max) public onlyOwner {
         require(max < 10**18, "bad max");
-        require( (max - min)/10**16 > 0, "bad max - min");
+        require( (max.sub(min))/10**16 > 0, "bad max - min");
 
         _MIN_MINT_RATIO_ = min;
         _MAX_MINT_RATIO_ = max;

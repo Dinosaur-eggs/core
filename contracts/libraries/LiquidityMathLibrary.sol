@@ -76,20 +76,22 @@ library LiquidityMathLibrary {
 
     // computes liquidity value given all the parameters of the pair
     function computeLiquidityValue(
+        address factory,
         uint256 reservesA,
         uint256 reservesB,
         uint256 totalSupply,
         uint256 liquidityAmount,
         bool feeOn,
         uint256 kLast
-    ) public pure returns (uint256 tokenAAmount, uint256 tokenBAmount) {
+    ) public view returns (uint256 tokenAAmount, uint256 tokenBAmount) {
         if (feeOn && kLast > 0) {
             uint256 rootK = Babylonian.sqrt(reservesA.mul(reservesB));
             uint256 rootKLast = Babylonian.sqrt(kLast);
             if (rootK > rootKLast) {
+                address fct = factory;
                 uint256 numerator1 = totalSupply;
                 uint256 numerator2 = rootK.sub(rootKLast);
-                uint256 denominator = rootK.mul(5).add(rootKLast);
+                uint256 denominator = rootK.mul(ISwapFactory(fct).feeToRate()).add(rootKLast);
                 uint256 feeLiquidity = FullMath.mulDiv(numerator1, numerator2, denominator);
                 totalSupply = totalSupply.add(feeLiquidity);
             }
@@ -111,7 +113,7 @@ library LiquidityMathLibrary {
         bool feeOn = ISwapFactory(factory).feeTo() != address(0);
         uint256 kLast = feeOn ? pair.kLast() : 0;
         uint256 totalSupply = pair.totalSupply();
-        return computeLiquidityValue(reservesA, reservesB, totalSupply, liquidityAmount, feeOn, kLast);
+        return computeLiquidityValue(factory, reservesA, reservesB, totalSupply, liquidityAmount, feeOn, kLast);
     }
 
     // given two tokens, tokenA and tokenB, and their "true price", i.e. the observed ratio of value of token A to token B,
@@ -135,6 +137,6 @@ library LiquidityMathLibrary {
         (uint256 reservesA, uint256 reservesB) =
             getReservesAfterArbitrage(factory, tokenA, tokenB, truePriceTokenA, truePriceTokenB);
 
-        return computeLiquidityValue(reservesA, reservesB, totalSupply, liquidityAmount, feeOn, kLast);
+        return computeLiquidityValue(factory, reservesA, reservesB, totalSupply, liquidityAmount, feeOn, kLast);
     }
 }
