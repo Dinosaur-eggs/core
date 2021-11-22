@@ -189,6 +189,7 @@ contract Erc20EarnNftPool is Ownable, IERC721Receiver {
 
     function stake(uint256 _pid) external validatePoolByPid(_pid) {
         require(pool[_pid].nftLeft > 0, "no NFT to earn");
+        require(tx.origin == msg.sender, "Cant call from contract");
 
         IERC20 token = IERC20(pool[_pid].tokenAddress);
         require(token.balanceOf(msg.sender) >= pool[_pid].stakeAmount, "out of balance");
